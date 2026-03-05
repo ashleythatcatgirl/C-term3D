@@ -1,8 +1,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "Include/cglm/util.h"
-#include "Include/cglm/vec3.h"
 #include "Include/glad.c"
 #include "main.h"
 #include "verticies.c"

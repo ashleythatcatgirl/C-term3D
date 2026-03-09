@@ -1,4 +1,4 @@
-# C-term blender
+# C-term3D
 
 A very lightweight terminal program for rendering, editing, and exporting object files and models.
 

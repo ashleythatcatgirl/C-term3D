@@ -16,37 +16,21 @@ typedef struct Input {
 typedef struct Model {
 	unsigned int VBO;
 	unsigned int VAO;
-	unsigned int EBO;
 
-	unsigned int vCount;
+	unsigned int shader;
 
-	float *verticies;
-	unsigned int *indices;
+	unsigned int transformCount;
+	vec3 *translate;
+	vec3 *rotate;
+	vec3 scale;
+
+	vec3 color;
 } Model;
 
-typedef struct Object {
-	unsigned int vOffset;
-	unsigned int vtOffset;
-
-	unsigned int vCount;
-	unsigned int vtCount;
-	unsigned int vnCount;
-	unsigned int fCount;
-
-	float *vArray;
-	unsigned int *fArray;
-
-	unsigned int VBO;
-	unsigned int VAO;
-	unsigned int EBO;
-
-	char name[64];
-} Object;
-
-typedef struct Objects {
+typedef struct Models {
 	unsigned int count;
-	Object *object;
-} Objects;
+	Model *model;
+} Models;
 
 typedef struct Texture {
 	unsigned int memory;
@@ -104,16 +88,15 @@ typedef struct Controls {
 
 int ParseArgs(int argc, char **argv, struct Input *input);
 
+void SetModelData(Model *model);
+
 char* GetShaderContent(const char* fileName);
+int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *fragShader);
 
-int LoadObjects(Objects *objects);
-void InitializeObjectData(Object *object);
-void SetObjectData(Object *object);
-int ParseOBJFile(Object *object);
+int LoadTextures(Textures *textures);
+int LinkTextures(Textures *textures, unsigned int *shaderProgram);
 
-int LoadTextures(Textures *textures, unsigned int shaderProgram);
-
-int RenderLoop(Window *window, unsigned int shaderProgram, Input *input, Model *model, Textures *textures, Transforms *transforms, Camera *camera);
+int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Transforms *transforms, Camera *camera);
 void processInput(GLFWwindow *window, Camera *camera, float deltaTime);
 
 
@@ -121,6 +104,6 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xPos, double yPos);
 void scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
 
-void FreeMemory(Objects *objects, Textures *textures);
+void FreeMemory(Models *models, Textures *textures);
 
-void InitializeStructs(Window *window, Input *input, Textures *textures, Objects *objects, Model *model, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls);
+void InitializeStructs(Window *window, Input *input, Textures *textures, Models *models, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls);

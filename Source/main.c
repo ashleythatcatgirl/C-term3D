@@ -1,6 +1,8 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include "Include/cglm/vec3-ext.h"
+#include "Include/cglm/vec3.h"
 #include "Include/glad.c"
 #include "main.h"
 #include "verticies.c"
@@ -28,15 +30,14 @@ int main(int argc, char **argv) {
 	struct Input input;
 
 	struct Textures textures;
-	struct Objects objects;
-	struct Model model;
+	struct Models models;
 	struct Transforms transforms;
 
 	struct Camera camera;
 	struct Mouse mouse;
 	struct Controls controls;
 	
-	InitializeStructs(&window, &input, &textures, &objects, &model, &transforms, &camera, &mouse, &controls);
+	InitializeStructs(&window, &input, &textures, &models, &transforms, &camera, &mouse, &controls);
 
 	ParseArgs(argc, argv, &input);
 
@@ -46,7 +47,7 @@ int main(int argc, char **argv) {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	printf("Window initializiation..\n");
-	window.frame = glfwCreateWindow(window.width, window.height, "C-term blender", NULL, NULL);
+	window.frame = glfwCreateWindow(window.width, window.height, "C-term3D", NULL, NULL);
 	if (window.frame == NULL) {
 		printf("Window creation fail\n");
 		glfwTerminate();
@@ -60,135 +61,66 @@ int main(int argc, char **argv) {
 	glfwSetCursorPosCallback(window.frame, mouse_callback);  
 	glfwSetScrollCallback(window.frame, scroll_callback);
 
+	glfwSetInputMode(window.frame, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 		printf("GLAD fail\n");
 		glfwTerminate();
 		return -1;
 	}
 
-
 	printf("Compiling shaders..\n");
-
-	const char *vertexShaderSource = GetShaderContent("Shaders/Vertex/normal1.glsl");
-	if (vertexShaderSource == 0) return -1;
-	//printf("%s\n", vertexShaderSource);
-
-	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-	glCompileShader(vertexShader);
-
-	int success;
-	char infoLog[512];
-
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-	if (!success) {
-        	glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-	       	printf("Vertex shader fail%s", infoLog);
-    	}
-
-	const char *fragmentShaderSource = GetShaderContent("Shaders/Fragment/mat1.glsl");
-	if (fragmentShaderSource == 0) return -1;
-	//printf("%s\n", fragmentShaderSource);
-
-	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-	glCompileShader(fragmentShader);
-
-	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-	if (!success) {
-        	glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        	printf("Fragment shader fail%s", infoLog);
-    	}
-
-	unsigned int shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-	glLinkProgram(shaderProgram);
-
-	glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    	if (!success) {
-        	glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        	printf("Shader to program linking fail\n %s", infoLog);
-    	}
-
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
+	LoadShader(&models.model[0].shader, "Shaders/Vertex/normal1.glsl", "Shaders/Fragment/mat1.glsl");
+	LoadShader(&models.model[1].shader, "Shaders/Vertex/normal1.glsl", "Shaders/Fragment/mat2.glsl");
+	LoadShader(&models.model[2].shader, "Shaders/Vertex/normal1.glsl", "Shaders/Fragment/mat3.glsl");
 
 	printf("Initializing object vertex data..\n");
+	for (int obj = 0; obj < models.count; obj++) {
+		SetModelData(&models.model[obj]);
 
-	glGenVertexArrays(1, &model.VAO);
-	glGenBuffers(1, &model.VBO);
-	glGenBuffers(1, &model.EBO);
+		glUseProgram(models.model[obj].shader);
+		glUniform3fv(glGetUniformLocation(models.model[obj].shader, "lightColor"), 1, models.model[2].color);
+		glUniform3fv(glGetUniformLocation(models.model[obj].shader, "objectColor"), 1, models.model[obj].color);
 
-	glBindVertexArray(model.VAO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, model.VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(verticies), model.verticies, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model.EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(model.indices), model.indices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3*sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	/*switch (LoadObjects(&objects)) {
-		case 0:
-			printf("\nObjects loaded\n");
-			break;
-		case 1:
-			printf("\nNo objects found\n");
-			break;
-		case -1:
-			printf("\nObject loading failed\n");
-			glfwTerminate();
-			return 1;
+		glUniform3fv(glGetUniformLocation(models.model[obj].shader, "lightPos"), 1, models.model[2].translate[0]);
 	}
-	*/
-	
+
 	printf("Initializing texture data..\n");
-	switch (LoadTextures(&textures, shaderProgram)) {
-		case 0:
-			printf("\nTextures loaded\n");
-			break;
-		case 1:
-			printf("\nNo textures found\n");
-			break;
-		case -1:
-			printf("\nTexture loading failed\n");
-			glfwTerminate();
-			return 1;
+	switch (LoadTextures(&textures)) {
+	case 0:
+		printf("\nTextures loaded\n");
+		break;
+	case 1:
+		printf("\nNo textures found\n");
+		break;
+	case -1:
+		printf("\nTexture loading failed\n");
+		glfwTerminate();
+		return 1;
 	}
-	
 
-	glUseProgram(shaderProgram);
-
-	printf("transformations.. \n");
+	for (int i = 0; i < 2; i++) {
+		printf("Model %d textures\n", i);
+		LinkTextures(&textures, &models.model[i].shader);
+	}
 
 	printf("Loading successful, press enter to continue..");
 	getchar();
 
-	int width, height;
 	printf("Opened window, press ESC to exit\n");
-	RenderLoop(&window, shaderProgram, &input, &model, &textures, &transforms, &camera);
+	RenderLoop(&window, &input, &models, &textures, &transforms, &camera);
 
 	printf("Closed window\n");
 	printf("Exiting program...\n");
 
-    	glDeleteProgram(shaderProgram);
+	FreeMemory(&models, &textures);
 
 	glfwTerminate();
-
-	FreeMemory(&objects, &textures);
 
 	return 0;
 }
 
-int RenderLoop(Window *window, unsigned int shaderProgram, Input *input, Model *model, Textures *textures, Transforms *transforms, Camera *camera) {
-	glfwSetInputMode(window->frame, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
-
+int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Transforms *transforms, Camera *camera) {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -196,21 +128,8 @@ int RenderLoop(Window *window, unsigned int shaderProgram, Input *input, Model *
 	if (input->options == 1) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
-
-	vec3 cubePos[8] = {
-		{-2.0, 1.0, 0.0},
-		{2.0, 1.0, -1.0},
-		{2.0, 1.0, 2.0},
-		{-3.0, -2.0, 0.0},
-		{0.0, -1.5, 0.0},
-		{4.0, 0.0, 1.0},
-		{3.0, -1.0, -2.0},
-		{-1.0, 4.0, -3.0},
-	};
-
-	transforms->modelLoc = glGetUniformLocation(shaderProgram, "model");
-	transforms->viewLoc = glGetUniformLocation(shaderProgram, "view");
-	transforms->projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+	
+	int lightColorLoc, lightPosLoc;
 
 	float deltaTime = 0.0;
 	float lastFrame = 0.0;
@@ -231,8 +150,6 @@ int RenderLoop(Window *window, unsigned int shaderProgram, Input *input, Model *
 			glBindTexture(GL_TEXTURE_2D, textures->texture[tex].memory);
 		}
 
-		glUseProgram(shaderProgram);
-
 		glm_mat4_identity(transforms->view);
 		glm_vec3_add(camera->position, camera->front, camera->target);
 		glm_lookat(camera->position, camera->target, (vec3){0.0, 1.0, 0.0}, transforms->view);
@@ -240,24 +157,43 @@ int RenderLoop(Window *window, unsigned int shaderProgram, Input *input, Model *
 		glm_mat4_identity(transforms->projection);
 		glm_perspective(glm_rad(camera->zoom), (float)window->width/(float)window->height, 0.1, 100.0, transforms->projection);
 
-		glUniformMatrix4fv(transforms->viewLoc, 1, GL_FALSE, (float*)transforms->view);
-		glUniformMatrix4fv(transforms->projectionLoc, 1, GL_FALSE, (float*)transforms->projection);
+		for (int obj = 0; obj < models->count; obj++) {
+			glUseProgram(models->model[obj].shader);
 
-		glBindVertexArray(model->VAO);
-		for (int i = 0; i < sizeof(cubePos) / sizeof(vec3); i++) {
-			glm_mat4_identity(transforms->model);
-			glm_translate(transforms->model, cubePos[i]);
-			glm_rotate(transforms->model, glfwGetTime(), cubePos[i]);
+			lightPosLoc = glGetUniformLocation(models->model[obj].shader, "lightPos");
+			lightColorLoc = glGetUniformLocation(models->model[obj].shader, "lightColor");
 
-			glUniformMatrix4fv(transforms->modelLoc, 1, GL_FALSE, (float*)transforms->model);
-			glDrawArrays(GL_TRIANGLES, 0, model->vCount);
+			transforms->modelLoc = glGetUniformLocation(models->model[obj].shader, "model");
+			transforms->viewLoc = glGetUniformLocation(models->model[obj].shader, "view");
+			transforms->projectionLoc = glGetUniformLocation(models->model[obj].shader, "projection");
+			glUniformMatrix4fv(transforms->viewLoc, 1, GL_FALSE, (float*)transforms->view);
+			glUniformMatrix4fv(transforms->projectionLoc, 1, GL_FALSE, (float*)transforms->projection);
+
+			glBindVertexArray(models->model[obj].VAO);
+			for (int tr = 0; tr < models->model[obj].transformCount; tr++) {
+				glm_mat4_identity(transforms->model);
+				if (obj == 2 ) {
+					glm_vec3_rotate(models->model[2].translate[0], deltaTime, models->model[2].rotate[tr]);
+					glm_vec3_copy((vec3){fmax(cos(glfwGetTime()), 0.1), fmax(cos(glfwGetTime()), 0.15), fmax(cos(glfwGetTime()), 0.2)}, models->model[2].color);
+				}
+
+				glUniform3fv(lightPosLoc, 1, models->model[2].translate[0]);
+				glUniform3fv(lightColorLoc, 1, models->model[2].color);
+
+				glm_translate(transforms->model, models->model[obj].translate[tr]);
+				for (int i = 0; i < 3; i++) {
+					if (models->model[obj].rotate[tr][i] == 0) continue;
+
+					glm_rotate(transforms->model, obj == 0 ? glfwGetTime() : 1.57, models->model[obj].rotate[tr]);
+					break;
+				}
+				glm_scale(transforms->model, models->model[obj].scale);
+
+				glUniformMatrix4fv(transforms->modelLoc, 1, GL_FALSE, (float*)transforms->model);
+				glDrawArrays(GL_TRIANGLES, 0, 36);
+			}
 		}
-
-		/*for (int obj = 0; obj < objects->count; obj++) {
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, objects->object[obj].EBO);
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		}*/
-
+	
 		glfwSwapBuffers(window->frame);
 		glfwPollEvents();
 	}
@@ -268,6 +204,11 @@ int RenderLoop(Window *window, unsigned int shaderProgram, Input *input, Model *
 void processInput(GLFWwindow *window, Camera *camera, float deltaTime) {
 	if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, true);
+	}
+	if(glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
+		glfwSetInputMode(window, GLFW_CURSOR,
+		glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED ?
+		GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 	}
 
 	float moveSpeed;
@@ -335,6 +276,53 @@ void processInput(GLFWwindow *window, Camera *camera, float deltaTime) {
 	glm_normalize_to(camera->direction, camera->front);
 }
 
+int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *fragShader) {
+	const char *vertexShaderSource = GetShaderContent(vertShader);
+	if (vertexShaderSource == 0) return -1;
+
+	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+	glCompileShader(vertexShader);
+
+	int success;
+	char infoLog[512];
+
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+	if (!success) {
+        	glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+	       	printf("Vertex shader fail%s", infoLog);
+    	}
+
+	const char *fragmentShaderSource = GetShaderContent(fragShader);
+	if (fragmentShaderSource == 0) return -1;
+
+	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+	glCompileShader(fragmentShader);
+
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+	if (!success) {
+        	glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+        	printf("Fragment shader fail%s", infoLog);
+    	}
+
+	*shaderProgram = glCreateProgram();
+	glAttachShader(*shaderProgram, vertexShader);
+	glAttachShader(*shaderProgram, fragmentShader);
+	glLinkProgram(*shaderProgram);
+
+	glGetProgramiv(*shaderProgram, GL_LINK_STATUS, &success);
+    	if (!success) {
+        	glGetProgramInfoLog(*shaderProgram, 512, NULL, infoLog);
+        	printf("Shader to program linking fail\n %s", infoLog);
+    	}
+
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
+
+	return 0;
+}
+
 char* GetShaderContent(const char* fileName) {
 	char buffer = 0;
 	char* content = 0;
@@ -365,92 +353,14 @@ char* GetShaderContent(const char* fileName) {
 	return content;
 }
 
-int LoadObjects(Objects *objects) {
-	printf("\n->Reading object data..\n");
-	struct dirent *de;
-	DIR *dr = opendir(OBJECT_DIRECTORY);
-	if (dr == NULL) return 1;
-	printf("  ->Found object folder!\n");
+void SetModelData(Model *model) {
+	glGenBuffers(1, &model->VBO);
+	glGenVertexArrays(1, &model->VAO);
 
-	char *end = 0;
-	while ((de = readdir(dr)) != NULL) {
-		if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) continue;
+	glBindBuffer(GL_ARRAY_BUFFER, model->VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(verticies), verticies, GL_STATIC_DRAW);
 
-		if ((end = strchr(de->d_name, '.')) == NULL) continue;
-		if (strcmp(end, ".obj")) continue;
-
-		objects->count++;
-	}
-	
-	if (objects->count == 0) return 1;
-
-	objects->object = (Object*)malloc(sizeof(Object) * objects->count);
-	if (objects->object == NULL) return -1;
-	for (int obj = 0; obj < objects->count; obj++) {
-		InitializeObjectData(&objects->object[obj]);
-	}
-
-	dr = opendir(OBJECT_DIRECTORY);
-
-	for (int obj = 0; (de = readdir(dr)) != NULL;) {
-		if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) continue;
-
-		if ((end = strchr(de->d_name, '.')) == NULL) continue;
-		if (strcmp(end, ".obj")) continue;
-
-		printf("    ->Objects[%d]: %s\n", obj, de->d_name);
-
-		//ParseOBJFile();
-	}
-
-	closedir(dr);
-
-	printf("\n->Setting object data..\n");
-	for (int obj = 0; obj < objects->count; obj++) {
-		printf("  ->Object[%d]\n", obj);
-		SetObjectData(&objects->object[obj]);
-	}
-
-	return 0;
-}
-
-char* ReadObjectData(Object *object, char *fileName) {
-	char buffer[128];
-	char typeBuf[4];
-	unsigned int type;
-
-	FILE *fPtr = fopen(fileName, "r");
-	if (fPtr == NULL) return 0;
-
-	return 0;
-}
-
-void InitializeObjectData(Object *object) {
-	object->vCount = 0;
-	object->vtCount = 0;
-	object->vnCount = 0;
-	object->fCount = 0;
-		
-	object->vArray = NULL;
-	object->fArray = NULL;
-
-	object->VBO = 0;
-	object->VAO = 0;
-	object->EBO = 0;
-}
-
-void SetObjectData(Object *object) {
-	glGenBuffers(1, &object->VBO);
-	glGenVertexArrays(1, &object->VAO);
-	glGenBuffers(1, &object->EBO);
-
-	glBindBuffer(GL_ARRAY_BUFFER, object->VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * object->vCount, object->vArray, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, object->EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(ivec3) * object->fCount, object->fArray, GL_STATIC_DRAW);
-
-	glBindVertexArray(object->VAO);
+	glBindVertexArray(model->VAO);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
@@ -461,7 +371,7 @@ void SetObjectData(Object *object) {
 	glEnableVertexAttribArray(2);
 }
 
-int LoadTextures(struct Textures *textures, unsigned int shaderProgram) {
+int LoadTextures(struct Textures *textures) {
 	printf("\n->Reading texture data..\n");
 	struct dirent *de;
 	DIR *dr = opendir(TEXTURE_DIRECTORY);
@@ -526,8 +436,13 @@ int LoadTextures(struct Textures *textures, unsigned int shaderProgram) {
 	}
 
 
+
+	return 0;
+}
+
+int LinkTextures(Textures *textures, unsigned int *shaderProgram) {
 	printf("\n->Linking texture data..\n");
-	glUseProgram(shaderProgram);
+	glUseProgram(*shaderProgram);
 
 	char textureName[64];
 	char num[16];
@@ -537,7 +452,7 @@ int LoadTextures(struct Textures *textures, unsigned int shaderProgram) {
 		strcpy(textureName, "texture");
 		sprintf(num, "%d", tex); 
 		strcat(textureName, num);
-		glUniform1i(glGetUniformLocation(shaderProgram, textureName), tex);
+		glUniform1i(glGetUniformLocation(*shaderProgram, textureName), tex);
 	}
 
 	return 0;
@@ -557,22 +472,16 @@ int ParseArgs(int argc, char **argv, struct Input *input) {
 	return 0;
 }
 
-void FreeMemory(Objects *objects, Textures *textures) {
-	if (objects->object != NULL) {
-		for (int obj = 0; obj < objects->count; obj++) {
-			if (objects->object[obj].vArray != NULL) {
-				free (objects->object[obj].vArray);
-			}
-			if (objects->object[obj].fArray != NULL) {
-				free (objects->object[obj].fArray);
-			}
+void FreeMemory(Models *models, Textures *textures) {
+	if (models->model != NULL) {
+		for (int obj = 0; obj < models->count; obj++) {
+ 	   		glDeleteBuffers(1, &models->model[obj].VBO);
+			glDeleteVertexArrays(1, &models->model[obj].VAO);
 
-    			glDeleteBuffers(1, &objects->object[obj].VBO);
-			glDeleteVertexArrays(1, &objects->object[obj].VAO);
-    			glDeleteBuffers(1, &objects->object[obj].EBO);
+    			glDeleteProgram(models->model[obj].shader);
 		}
 
-		free(objects->object);
+		free(models->model);
 	}
 	if (textures->texture != NULL) {
 		free(textures->texture);
@@ -617,7 +526,7 @@ void scroll_callback(GLFWwindow *window, double xOffset, double yOffset) {
 	&& controls->camera->zoom - yOffset > 1) controls->camera->zoom -= yOffset;
 }
 
-void InitializeStructs(Window *window, Input *input, Textures *textures, Objects *objects, Model *model, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls) {
+void InitializeStructs(Window *window, Input *input, Textures *textures, Models *models, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls) {
 	window->width = INIT_WIDTH;
 	window->height = INIT_HEIGHT;
 	window->frame = NULL;
@@ -627,12 +536,81 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Objects
 	textures->count = 0;
 	textures->texture = NULL;
 
-	objects->count = 0;
-	objects->object = NULL;
+	models->count = 3;
+	models->model = malloc(sizeof(Model) * models->count);
 
-	model->vCount = 36;
-	model->verticies = verticies;
-	model->indices = indices;
+	vec3 cubeT[8] = {
+		{-2.0, 1.0, 0.0},
+		{2.0, 1.0, -1.0},
+		{2.0, 1.0, 2.0},
+		{-3.0, -2.0, 0.0},
+		{0.0, -1.5, 0.0},
+		{4.0, 0.0, 1.0},
+		{3.0, -1.0, -2.0},
+		{-1.0, 4.0, -3.0}
+	};
+	vec3 cubeR[8] = {
+		{-1.0, 1.0, 0.0},
+		{1.0, 1.0, -1.0},
+		{1.0, 1.0, 1.0},
+		{-1.0, -1.0, 0.0},
+		{0.0, -1.0, 0.0},
+		{1.0, 0.0, 1.0},
+		{1.0, -1.0, -1.0},
+		{-1.0, 1.0, -1.0}
+	};
+	vec3 cubeS = {1.0, 1.0, 1.0};
+
+	vec3 floorT[2] = {
+		{0.0, -3.0, 0.0},
+		{0.0, 7.0, -10.0}
+	};
+	vec3 floorR[2] = {
+		{0.0, 0.0, 0.0},
+		{1.0, 0.0, 0.0}
+	};
+	vec3 floorS = {20.0, 0.2, 20.0};
+
+	vec3 lightT = {0.0, 15.0, 0.0};
+	vec3 lightR = {0.0, 0.0, 1.0};
+	vec3 lightS = {0.5, 0.5, 0.5};
+
+	glm_vec3_copy((vec3){0.9, 0.7, 0.3}, models->model[0].color);
+	models->model[0].transformCount = 8;
+	models->model[0].translate = malloc(sizeof(vec3) * models->model[0].transformCount);
+	for (int tr = 0; tr < models->model[0].transformCount; tr++) {
+		glm_vec3_copy(cubeT[tr], models->model[0].translate[tr]);
+	}
+	models->model[0].rotate = malloc(sizeof(vec3) * models->model[0].transformCount);
+	for (int tr = 0; tr < models->model[0].transformCount; tr++) {
+		glm_vec3_copy(cubeR[tr], models->model[0].rotate[tr]);
+		glm_vec3_normalize(models->model[0].rotate[tr]);
+	}
+	glm_vec3_copy(cubeS, models->model[0].scale);
+
+	glm_vec3_copy((vec3){0.5, 0.6, 0.4}, models->model[1].color);
+	models->model[1].transformCount = 2;
+	models->model[1].translate = malloc(sizeof(vec3) * models->model[1].transformCount);
+	for (int tr = 0; tr < models->model[1].transformCount; tr++) {
+		glm_vec3_copy(floorT[tr], models->model[1].translate[tr]);
+	}
+	models->model[1].rotate = malloc(sizeof(vec3) * models->model[1].transformCount);
+	for (int tr = 0; tr < models->model[1].transformCount; tr++) {
+		glm_vec3_copy(floorR[tr], models->model[1].rotate[tr]);
+		glm_vec3_normalize(models->model[1].rotate[tr]);
+	}
+	glm_vec3_copy(floorS, models->model[1].scale);
+
+	glm_vec3_copy((vec3){1.0, 1.0, 0.9}, models->model[2].color);
+	models->model[2].transformCount = 1;
+	models->model[2].translate = malloc(sizeof(vec3));
+	glm_vec3_copy(lightT, models->model[2].translate[0]);
+
+	models->model[2].rotate = malloc(sizeof(vec3));
+	glm_vec3_copy(lightR, models->model[2].rotate[0]);
+	glm_vec3_normalize(models->model[2].rotate[0]);
+
+	glm_vec3_copy(lightS, models->model[2].scale);
 
 	transforms->modelLoc = 0;
 	transforms->viewLoc = 0;

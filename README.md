@@ -14,6 +14,17 @@ gcc -lglfw -lm -o main.out main.c
 I'm pretty sure the libraries used are either included or standard c libraries, if not.. i'll fix it eventually.
 I'll release it as a compiled program at some point so it's actually presentable and not just souce code.
 
+# Libraries and packages used
+Rendering - [OpenGL](https://www.opengl.org/)
+
+Window API - [GLFW](https://www.glfw.org/)
+
+Image loading - [stb_image](https://github.com/nothings/stb)
+
+Matrix and vector calculations - [CGLM](https://github.com/recp/cglm)
+
+Loader generator - [GLAD](https://glad.dav1d.de/)
+
 ## List of current features
 
 # Rendering

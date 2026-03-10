@@ -1,16 +1,14 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "Include/cglm/vec3-ext.h"
-#include "Include/cglm/vec3.h"
-#include "Include/glad.c"
+#include "include/glad.c"
 #include "main.h"
 #include "verticies.c"
 
 #define STB_IMAGE_IMPLEMENTATION
 
-#include "Include/stb_image.h"
-#include "Include/cglm/cglm.h"
+#include "include/stb_image.h"
+#include "include/cglm/cglm.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <math.h>
@@ -21,9 +19,9 @@
 const unsigned int INIT_WIDTH = 960;
 const unsigned int INIT_HEIGHT = 640;
 
-const char OBJECT_DIRECTORY[] = "../Files/Objects/";
-const char TEXTURE_DIRECTORY[] = "../Files/Textures/";
-const char SHADER_DIRECTORY[] = "../Source/Shaders/";
+const char OBJECT_DIRECTORY[] = "../files/objects/";
+const char TEXTURE_DIRECTORY[] = "../files/textures/";
+const char SHADER_DIRECTORY[] = "../src/shaders/";
 
 int main(int argc, char **argv) {
 	struct Window window;
@@ -70,9 +68,9 @@ int main(int argc, char **argv) {
 	}
 
 	printf("Compiling shaders..\n");
-	LoadShader(&models.model[0].shader, "Shaders/Vertex/normal1.glsl", "Shaders/Fragment/mat1.glsl");
-	LoadShader(&models.model[1].shader, "Shaders/Vertex/normal1.glsl", "Shaders/Fragment/mat2.glsl");
-	LoadShader(&models.model[2].shader, "Shaders/Vertex/normal1.glsl", "Shaders/Fragment/mat3.glsl");
+	LoadShader(&models.model[0].shader, "shaders/vertex/normal1.glsl", "shaders/fragment/mat1.glsl");
+	LoadShader(&models.model[1].shader, "shaders/vertex/normal1.glsl", "shaders/fragment/mat2.glsl");
+	LoadShader(&models.model[2].shader, "shaders/vertex/normal1.glsl", "shaders/fragment/mat3.glsl");
 
 	printf("Initializing object vertex data..\n");
 	for (int obj = 0; obj < models.count; obj++) {
@@ -83,6 +81,7 @@ int main(int argc, char **argv) {
 		glUniform3fv(glGetUniformLocation(models.model[obj].shader, "objectColor"), 1, models.model[obj].color);
 
 		glUniform3fv(glGetUniformLocation(models.model[obj].shader, "lightPos"), 1, models.model[2].translate[0]);
+		glUniform3fv(glGetUniformLocation(models.model[obj].shader, "camPos"), 1, camera.position);
 	}
 
 	printf("Initializing texture data..\n");
@@ -124,12 +123,13 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
 	if (input->options == 1) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	}
 	
-	int lightColorLoc, lightPosLoc;
+	int lightColorLoc, lightPosLoc, camPosLoc;
+	vec3 skyColorIn = {0.5, 0.5, 0.6};
+	vec3 skyColorOut;
 
 	float deltaTime = 0.0;
 	float lastFrame = 0.0;
@@ -142,7 +142,8 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 		glfwGetFramebufferSize(window->frame, &window->width, &window->height);
 		processInput(window->frame, camera, deltaTime);
 
-		glClearColor(0.5, 0.5, 0.6, 1.0);
+		glm_vec3_mul(skyColorIn, models->model[2].color, skyColorOut);
+		glClearColor(skyColorOut[0], skyColorOut[1], skyColorOut[2], 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		for (int tex = 0; tex < textures->count; tex++) {
@@ -160,8 +161,9 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 		for (int obj = 0; obj < models->count; obj++) {
 			glUseProgram(models->model[obj].shader);
 
-			lightPosLoc = glGetUniformLocation(models->model[obj].shader, "lightPos");
 			lightColorLoc = glGetUniformLocation(models->model[obj].shader, "lightColor");
+			lightPosLoc = glGetUniformLocation(models->model[obj].shader, "lightPos");
+			camPosLoc = glGetUniformLocation(models->model[obj].shader, "camPos");
 
 			transforms->modelLoc = glGetUniformLocation(models->model[obj].shader, "model");
 			transforms->viewLoc = glGetUniformLocation(models->model[obj].shader, "view");
@@ -179,6 +181,7 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 
 				glUniform3fv(lightPosLoc, 1, models->model[2].translate[0]);
 				glUniform3fv(lightColorLoc, 1, models->model[2].color);
+				glUniform3fv(camPosLoc, 1, camera->position);
 
 				glm_translate(transforms->model, models->model[obj].translate[tr]);
 				for (int i = 0; i < 3; i++) {

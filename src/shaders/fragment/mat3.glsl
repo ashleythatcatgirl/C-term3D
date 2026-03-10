@@ -7,6 +7,9 @@ in vec2 textureCords;
 
 uniform vec3 lightColor;
 
+uniform vec3 lightPos;
+uniform vec3 camPos;
+
 void main() {
 	FragColor = vec4(lightColor, 1.0);
 }

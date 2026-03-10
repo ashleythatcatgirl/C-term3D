@@ -7,7 +7,6 @@ It's a project i decided to make cause i got really into the whole process of re
 
 Also didn't update the repo in half a year lol, sowwyyyyyyyyyy.
 
-
 ## Compilation through gcc
 ```
 gcc -lglfw -lm -o main.out main.c

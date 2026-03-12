@@ -1,27 +1,13 @@
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 
-#include "include/glad.c"
 #include "main.h"
+
+#include "camera.h"
+#include "include/glad.c"
+
+#include "camera.c"
+#include "parseInput.c"
+
 #include "verticies.c"
-
-#define STB_IMAGE_IMPLEMENTATION
-
-#include "include/stb_image.h"
-#include "include/cglm/cglm.h"
-#include <stdio.h>
-#include <stdbool.h>
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dirent.h>
-
-const unsigned int INIT_WIDTH = 960;
-const unsigned int INIT_HEIGHT = 640;
-
-const char OBJECT_DIRECTORY[] = "../files/objects/";
-const char TEXTURE_DIRECTORY[] = "../files/textures/";
-const char SHADER_DIRECTORY[] = "../src/shaders/";
 
 int main(int argc, char **argv) {
 	struct Window window;
@@ -35,42 +21,24 @@ int main(int argc, char **argv) {
 	struct Mouse mouse;
 	struct Controls controls;
 	
-	InitializeStructs(&window, &input, &textures, &models, &transforms, &camera, &mouse, &controls);
+	InitializeStructs(&window, &textures, &models, &transforms, &camera, &mouse, &controls);
 
-	ParseArgs(argc, argv, &input);
-
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	printf("Window initializiation..\n");
-	window.frame = glfwCreateWindow(window.width, window.height, "C-term3D", NULL, NULL);
-	if (window.frame == NULL) {
-		printf("Window creation fail\n");
+	//ParseArgs(argc, argv, &arguments);
+	
+	switch(CreateWindow(&window, &controls)) {
+	case 0:
+		printf("Window created successfully\n");
+		break;
+	case 1:
+		printf("Window failed to create\n");
 		glfwTerminate();
-		return -1;
-	}
-
-	glfwSetWindowUserPointer(window.frame, (void*)&controls);
-
-	glfwMakeContextCurrent(window.frame);
-	glfwSetFramebufferSizeCallback(window.frame, framebuffer_size_callback);  
-	glfwSetCursorPosCallback(window.frame, mouse_callback);  
-	glfwSetScrollCallback(window.frame, scroll_callback);
-
-	glfwSetInputMode(window.frame, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-		printf("GLAD fail\n");
-		glfwTerminate();
-		return -1;
+		break;
 	}
 
 	printf("Compiling shaders..\n");
-	LoadShader(&models.model[0].shader, "shaders/vertex/normal1.glsl", "shaders/fragment/mat1.glsl");
-	LoadShader(&models.model[1].shader, "shaders/vertex/normal1.glsl", "shaders/fragment/mat2.glsl");
-	LoadShader(&models.model[2].shader, "shaders/vertex/normal1.glsl", "shaders/fragment/mat3.glsl");
+	LoadShader(&models.model[0].shader, "shaders/vertex/normal1.glsl", "shaders/fragment/object.glsl");
+	LoadShader(&models.model[1].shader, "shaders/vertex/normal1.glsl", "shaders/fragment/object.glsl");
+	LoadShader(&models.model[2].shader, "shaders/vertex/normal1.glsl", "shaders/fragment/light.glsl");
 
 	printf("Initializing object vertex data..\n");
 	for (int obj = 0; obj < models.count; obj++) {
@@ -82,9 +50,13 @@ int main(int argc, char **argv) {
 
 		glUniform3fv(glGetUniformLocation(models.model[obj].shader, "lightPos"), 1, models.model[2].translate[0]);
 		glUniform3fv(glGetUniformLocation(models.model[obj].shader, "camPos"), 1, camera.position);
+
+		glUniform3fv(glGetUniformLocation(models.model[obj].shader, "material.ambient"), 1, models.model[obj].material.ambient);
+		glUniform3fv(glGetUniformLocation(models.model[obj].shader, "material.diffuse"), 1, models.model[obj].material.diffuse);
+		glUniform3fv(glGetUniformLocation(models.model[obj].shader, "material.specular"), 1, models.model[obj].material.specular);
+		glUniform1f(glGetUniformLocation(models.model[obj].shader, "material.shininess"), models.model[obj].material.shininess);
 	}
 
-	printf("Initializing texture data..\n");
 	switch (LoadTextures(&textures)) {
 	case 0:
 		printf("\nTextures loaded\n");
@@ -123,9 +95,9 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	if (input->options == 1) {
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	}
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	SetNonBlocking();
 	
 	int lightColorLoc, lightPosLoc, camPosLoc;
 	vec3 skyColorIn = {0.5, 0.5, 0.6};
@@ -135,21 +107,18 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 	float lastFrame = 0.0;
 	float currentFrame = 0.0;
 	while(!glfwWindowShouldClose(window->frame)) {	
+		ParseInput(input);
+
 		currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
 		glfwGetFramebufferSize(window->frame, &window->width, &window->height);
-		processInput(window->frame, camera, deltaTime);
+		processInput(window, camera, deltaTime);
 
 		glm_vec3_mul(skyColorIn, models->model[2].color, skyColorOut);
 		glClearColor(skyColorOut[0], skyColorOut[1], skyColorOut[2], 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		for (int tex = 0; tex < textures->count; tex++) {
-			glActiveTexture(GL_TEXTURE0 + tex);
-			glBindTexture(GL_TEXTURE_2D, textures->texture[tex].memory);
-		}
 
 		glm_mat4_identity(transforms->view);
 		glm_vec3_add(camera->position, camera->front, camera->target);
@@ -159,6 +128,9 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 		glm_perspective(glm_rad(camera->zoom), (float)window->width/(float)window->height, 0.1, 100.0, transforms->projection);
 
 		for (int obj = 0; obj < models->count; obj++) {
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, textures->texture[models->model[obj].texture].memory);
+
 			glUseProgram(models->model[obj].shader);
 
 			lightColorLoc = glGetUniformLocation(models->model[obj].shader, "lightColor");
@@ -174,10 +146,11 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 			glBindVertexArray(models->model[obj].VAO);
 			for (int tr = 0; tr < models->model[obj].transformCount; tr++) {
 				glm_mat4_identity(transforms->model);
+				/*
 				if (obj == 2 ) {
-					glm_vec3_rotate(models->model[2].translate[0], deltaTime, models->model[2].rotate[tr]);
-					glm_vec3_copy((vec3){fmax(cos(glfwGetTime()), 0.1), fmax(cos(glfwGetTime()), 0.15), fmax(cos(glfwGetTime()), 0.2)}, models->model[2].color);
+					glm_vec3_rotate(models->model[2].translate[0], deltaTime/2, models->model[2].rotate[tr]);
 				}
+				*/
 
 				glUniform3fv(lightPosLoc, 1, models->model[2].translate[0]);
 				glUniform3fv(lightColorLoc, 1, models->model[2].color);
@@ -204,79 +177,34 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 	return 0;
 }
 
-void processInput(GLFWwindow *window, Camera *camera, float deltaTime) {
-	if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window, true);
+void processInput(Window *window, Camera *camera, float deltaTime) {
+	if(glfwGetKey(window->frame, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+		glfwSetWindowShouldClose(window->frame, true);
 	}
-	if(glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS) {
-		glfwSetInputMode(window, GLFW_CURSOR,
-		glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED ?
+	if(glfwGetKey(window->frame, GLFW_KEY_TAB) == GLFW_PRESS
+	&& window->delay < glfwGetTime() - 0.1) {
+		window->delay = glfwGetTime();
+		glfwSetInputMode(window->frame, GLFW_CURSOR,
+		glfwGetInputMode(window->frame, GLFW_CURSOR) == GLFW_CURSOR_DISABLED ?
 		GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 	}
 
-	float moveSpeed;
-	if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-		moveSpeed = 2 * camera->moveSpeed * deltaTime;
-	} else {
-		moveSpeed = camera->moveSpeed * deltaTime;
-	}
+	float moveSpeed = camera->moveSpeed * deltaTime;
 	float turnSpeed = camera->turnSpeed * deltaTime;
-	vec3 move;
+	if(glfwGetKey(window->frame, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) moveSpeed *= 4;
 
-
-	if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-		glm_vec3_scale(camera->front, moveSpeed, move);
-		glm_vec3_add(camera->position, move, camera->position);	
-	}
-	if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-		glm_vec3_scale(camera->front, moveSpeed, move);
-		glm_vec3_sub(camera->position, move, camera->position);	
-	}
-	if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-		glm_cross(camera->front, (vec3){0.0, 1.0, 0.0}, camera->right);
-		glm_normalize(camera->right);
-		glm_vec3_scale(camera->right, moveSpeed, move);
-		glm_vec3_sub(camera->position, move, camera->position);	
-	}
-	if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-		glm_cross(camera->front, (vec3){0.0, 1.0, 0.0}, camera->right);
-		glm_normalize(camera->right);
-		glm_vec3_scale(camera->right, moveSpeed, move);
-		glm_vec3_add(camera->position, move, camera->position);	
-	}
-	if(glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
-		glm_vec3_scale((vec3){0.0, 1.0, 0.0}, moveSpeed, move);
-		glm_vec3_add(camera->position, move, camera->position);	
-	}
-	if(glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
-		glm_vec3_scale((vec3){0.0, 1.0, 0.0}, moveSpeed, move);
-		glm_vec3_sub(camera->position, move, camera->position);	
-	}
-
-	if(glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-		camera->yaw += turnSpeed;
-	}
-	if(glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-		camera->yaw -= turnSpeed;
-	}
-	if(glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-		if (camera->pitch - turnSpeed > -1.57) camera->pitch -= turnSpeed;
-	}
-	if(glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-		if (camera->pitch + turnSpeed < 1.57) camera->pitch += turnSpeed;
-	}
-
-	if(glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-		if (camera->zoom - 1 > 1) camera->zoom -= 1;
-	}
-	if(glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
-		if (camera->zoom + 1 < 90) camera->zoom += 1;
-	}
-
-	camera->direction[0] = cos(camera->yaw) * cos(camera->pitch);
-	camera->direction[1] = sin(camera->pitch);
-	camera->direction[2] = sin(camera->yaw) * cos(camera->pitch);
-	glm_normalize_to(camera->direction, camera->front);
+	if(glfwGetKey(window->frame, GLFW_KEY_W) == GLFW_PRESS) CameraMoveZ(camera, moveSpeed);
+	if(glfwGetKey(window->frame, GLFW_KEY_S) == GLFW_PRESS) CameraMoveZ(camera, -moveSpeed);
+	if(glfwGetKey(window->frame, GLFW_KEY_A) == GLFW_PRESS) CameraMoveX(camera, moveSpeed);
+	if(glfwGetKey(window->frame, GLFW_KEY_D) == GLFW_PRESS) CameraMoveX(camera, -moveSpeed);
+	if(glfwGetKey(window->frame, GLFW_KEY_E) == GLFW_PRESS) CameraMoveY(camera, moveSpeed);
+	if(glfwGetKey(window->frame, GLFW_KEY_Q) == GLFW_PRESS) CameraMoveY(camera, -moveSpeed);
+	if(glfwGetKey(window->frame, GLFW_KEY_RIGHT) == GLFW_PRESS) CameraYaw(camera, turnSpeed);
+	if(glfwGetKey(window->frame, GLFW_KEY_LEFT) == GLFW_PRESS) CameraYaw(camera, -turnSpeed);
+	if(glfwGetKey(window->frame, GLFW_KEY_UP) == GLFW_PRESS) CameraPitch(camera, turnSpeed);
+	if(glfwGetKey(window->frame, GLFW_KEY_DOWN) == GLFW_PRESS) CameraPitch(camera, -turnSpeed);
+	if(glfwGetKey(window->frame, GLFW_KEY_C) == GLFW_PRESS) CameraZoom(camera, 1);
+	if(glfwGetKey(window->frame, GLFW_KEY_Z) == GLFW_PRESS) CameraZoom(camera, -1);
 }
 
 int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *fragShader) {
@@ -375,6 +303,8 @@ void SetModelData(Model *model) {
 }
 
 int LoadTextures(struct Textures *textures) {
+	printf("Initializing texture data..\n");
+
 	printf("\n->Reading texture data..\n");
 	struct dirent *de;
 	DIR *dr = opendir(TEXTURE_DIRECTORY);
@@ -438,8 +368,6 @@ int LoadTextures(struct Textures *textures) {
 		stbi_image_free(data);
 	}
 
-
-
 	return 0;
 }
 
@@ -447,30 +375,7 @@ int LinkTextures(Textures *textures, unsigned int *shaderProgram) {
 	printf("\n->Linking texture data..\n");
 	glUseProgram(*shaderProgram);
 
-	char textureName[64];
-	char num[16];
-
-	for (int tex = 0; tex < textures->count; tex++) {
-		printf("  ->Texture[%d]\n", tex);
-		strcpy(textureName, "texture");
-		sprintf(num, "%d", tex); 
-		strcat(textureName, num);
-		glUniform1i(glGetUniformLocation(*shaderProgram, textureName), tex);
-	}
-
-	return 0;
-}
-
-int ParseArgs(int argc, char **argv, struct Input *input) {
-	if (argc <= 1) return 0;
-
-	for (int i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "wireframe") == 0) {
-			input->options = 1;
-		}
-		
-		printf("%d\n", input->options);
-	}
+	glUniform1i(glGetUniformLocation(*shaderProgram, "texture1"), 0);
 
 	return 0;
 }
@@ -512,29 +417,52 @@ void mouse_callback(GLFWwindow* window, double xPos, double yPos) {
 	controls->mouse->lastX = xPos;
 	controls->mouse->lastY = yPos;
 	
-	controls->camera->yaw += controls->mouse->xOffset;
-	if (controls->camera->pitch + controls->mouse->yOffset < 1.57
-	&& controls->camera->pitch + controls->mouse->yOffset > -1.57) controls->camera->pitch += controls->mouse->yOffset;
-
-	controls->camera->direction[0] = cos(controls->camera->yaw) * cos(controls->camera->pitch);
-	controls->camera->direction[1] = sin(controls->camera->pitch);
-	controls->camera->direction[2] = sin(controls->camera->yaw) * cos(controls->camera->pitch);
-	glm_normalize_to(controls->camera->direction, controls->camera->front);
+	CameraYaw(controls->camera, controls->mouse->xOffset);
+	CameraPitch(controls->camera, controls->mouse->yOffset);
 }
 
 void scroll_callback(GLFWwindow *window, double xOffset, double yOffset) {
 	Controls *controls = glfwGetWindowUserPointer(window);
 
-	if (controls->camera->zoom - yOffset < 90
-	&& controls->camera->zoom - yOffset > 1) controls->camera->zoom -= yOffset;
+	CameraZoom(controls->camera, 2*yOffset);
 }
 
-void InitializeStructs(Window *window, Input *input, Textures *textures, Models *models, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls) {
+int CreateWindow(Window *window, Controls *controls) {
+	printf("Window initializiation..\n");
+
+	glfwInit();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+	window->frame = glfwCreateWindow(window->width, window->height, "C-term3D", NULL, NULL);
+	if (window->frame == NULL) {
+		printf("Window creation error\n");
+		return 1;
+	}
+
+	glfwSetWindowUserPointer(window->frame, (void*)controls);
+
+	glfwMakeContextCurrent(window->frame);
+	glfwSetFramebufferSizeCallback(window->frame, framebuffer_size_callback);  
+	glfwSetCursorPosCallback(window->frame, mouse_callback);  
+	glfwSetScrollCallback(window->frame, scroll_callback);
+
+	glfwSetInputMode(window->frame, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+		printf("GLAD error\n");
+		return 1;
+	}
+
+	return 0;
+}
+
+void InitializeStructs(Window *window, Textures *textures, Models *models, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls) {
+	window->delay = glfwGetTime();
 	window->width = INIT_WIDTH;
 	window->height = INIT_HEIGHT;
 	window->frame = NULL;
-
-	input->options = 0;
 
 	textures->count = 0;
 	textures->texture = NULL;
@@ -578,6 +506,13 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	vec3 lightR = {0.0, 0.0, 1.0};
 	vec3 lightS = {0.5, 0.5, 0.5};
 
+	// MODEL 0
+	models->model[0].texture = 0;
+	glm_vec3_copy((vec3){0.1, 0.1, 0.1}, models->model[0].material.ambient);
+	glm_vec3_copy((vec3){0.45, 0.4, 0.4}, models->model[0].material.diffuse);
+	glm_vec3_copy((vec3){0.7, 0.6, 0.6}, models->model[0].material.specular);
+	models->model[0].material.shininess = 2;
+
 	glm_vec3_copy((vec3){0.9, 0.7, 0.3}, models->model[0].color);
 	models->model[0].transformCount = 8;
 	models->model[0].translate = malloc(sizeof(vec3) * models->model[0].transformCount);
@@ -590,6 +525,13 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 		glm_vec3_normalize(models->model[0].rotate[tr]);
 	}
 	glm_vec3_copy(cubeS, models->model[0].scale);
+
+	// MODEL 1
+	models->model[1].texture = 1;
+	glm_vec3_copy((vec3){0.1, 0.1, 0.1}, models->model[1].material.ambient);
+	glm_vec3_copy((vec3){0.5, 0.55, 0.6}, models->model[1].material.diffuse);
+	glm_vec3_copy((vec3){1.0, 1.0, 1.0}, models->model[1].material.specular);
+	models->model[1].material.shininess = 128;
 
 	glm_vec3_copy((vec3){0.5, 0.6, 0.4}, models->model[1].color);
 	models->model[1].transformCount = 2;
@@ -604,7 +546,8 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	}
 	glm_vec3_copy(floorS, models->model[1].scale);
 
-	glm_vec3_copy((vec3){1.0, 1.0, 0.9}, models->model[2].color);
+	// MODEL 2
+	glm_vec3_copy((vec3){1.0, 1.0, 1.0}, models->model[2].color);
 	models->model[2].transformCount = 1;
 	models->model[2].translate = malloc(sizeof(vec3));
 	glm_vec3_copy(lightT, models->model[2].translate[0]);

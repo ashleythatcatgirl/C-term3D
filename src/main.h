@@ -1,17 +1,49 @@
+
+#ifndef MAIN_H
+#define MAIN_H
+
+#define STB_IMAGE_IMPLEMENTATION
+
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#include "include/stb_image.h"
 #include "include/cglm/cglm.h"
 
+#include <stdio.h>
+#include <stdbool.h>
+#include <math.h>
+#include <string.h>
+#include <dirent.h>
+
+#include <unistd.h>
+#include <fcntl.h>
+
+const unsigned int INIT_WIDTH = 960;
+const unsigned int INIT_HEIGHT = 640;
+
+const char OBJECT_DIRECTORY[] = "../files/objects/";
+const char TEXTURE_DIRECTORY[] = "../files/textures/";
+const char SHADER_DIRECTORY[] = "../src/shaders/";
+
 typedef struct Window {
+	double delay;
 	int width;
 	int height;
 	GLFWwindow *frame;
 } Window;
 
 typedef struct Input {
-	unsigned int options;
-	// wireframe
-	// whatver
+	char buffer[128];
+	int length;
 } Input;
+
+typedef struct Material {
+	vec3 ambient;
+	vec3 diffuse;
+	vec3 specular;
+	float shininess;
+} Material;
 
 typedef struct Model {
 	unsigned int VBO;
@@ -25,6 +57,9 @@ typedef struct Model {
 	vec3 scale;
 
 	vec3 color;
+	unsigned int texture;
+
+	Material material;
 } Model;
 
 typedef struct Models {
@@ -88,6 +123,8 @@ typedef struct Controls {
 
 int ParseArgs(int argc, char **argv, struct Input *input);
 
+int CreateWindow(Window *window, Controls *controls);
+
 void SetModelData(Model *model);
 
 char* GetShaderContent(const char* fileName);
@@ -97,7 +134,7 @@ int LoadTextures(Textures *textures);
 int LinkTextures(Textures *textures, unsigned int *shaderProgram);
 
 int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Transforms *transforms, Camera *camera);
-void processInput(GLFWwindow *window, Camera *camera, float deltaTime);
+void processInput(Window *window, Camera *camera, float deltaTime);
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -106,4 +143,6 @@ void scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
 
 void FreeMemory(Models *models, Textures *textures);
 
-void InitializeStructs(Window *window, Input *input, Textures *textures, Models *models, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls);
+void InitializeStructs(Window *window, Textures *textures, Models *models, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls);
+
+#endif

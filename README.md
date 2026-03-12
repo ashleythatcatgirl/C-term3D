@@ -15,7 +15,7 @@ I'm pretty sure the libraries used are either included or standard c libraries, 
 I'll release it as a compiled program at some point so it's actually presentable and not just souce code.
 
 # Libraries and packages used
-Rendering - [OpenGL](https://www.opengl.org/)
+Rendering - [OpenGL 4.5 core](https://www.opengl.org/)
 
 Window API - [GLFW](https://www.glfw.org/)
 

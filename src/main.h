@@ -19,6 +19,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include <regex.h>
+
 const unsigned int INIT_WIDTH = 960;
 const unsigned int INIT_HEIGHT = 640;
 
@@ -36,6 +38,7 @@ typedef struct Window {
 typedef struct Input {
 	char buffer[128];
 	int length;
+	unsigned int opts;
 } Input;
 
 typedef struct Material {

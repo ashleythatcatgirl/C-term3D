@@ -26,8 +26,8 @@ uniform vec3 camPos;
 void main() {
 	vec3 ambient = lightColor * material.ambient;
 
-	vec3 lightDir = normalize(lightPos - fragPos);
 	vec3 normalized = normalize(normalCords);
+	vec3 lightDir = normalize(lightPos - fragPos);
 	float angleDif = max(dot(lightDir, normalized), 0.0);
 	vec3 diffuse = lightColor * (angleDif * material.diffuse);
 
@@ -36,7 +36,6 @@ void main() {
 	float angleSpec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
 	vec3 specular = lightColor * (angleSpec * material.specular);
 
-
-	//FragColor = vec4(ambient * objectColor, 1.0);
-	FragColor = vec4((ambient + diffuse + specular) * vec3(texture(texture1, textureCords)), 1.0);
+	vec3 light = ambient + diffuse + specular;
+	FragColor = vec4(light * vec3(texture(texture1, textureCords)), 1.0);
 }

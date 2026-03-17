@@ -12,6 +12,7 @@
 int main(int argc, char **argv) {
 	struct Window window;
 	struct Input input;
+	input.opts = 0;
 
 	struct Textures textures;
 	struct Models models;
@@ -78,12 +79,7 @@ int main(int argc, char **argv) {
 	printf("Loading successful, press enter to continue..");
 	getchar();
 
-	printf("Opened window, press ESC to exit\n");
 	RenderLoop(&window, &input, &models, &textures, &transforms, &camera);
-
-	printf("Closed window\n");
-	printf("Exiting program...\n");
-
 	FreeMemory(&models, &textures);
 
 	glfwTerminate();
@@ -92,22 +88,22 @@ int main(int argc, char **argv) {
 }
 
 int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Transforms *transforms, Camera *camera) {
+	printf("Opened window, press ESC to exit\n");
+	printf("View available commands with 'help'\n");
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	SetNonBlocking();
 	
 	int lightColorLoc, lightPosLoc, camPosLoc;
-	vec3 skyColorIn = {0.5, 0.5, 0.6};
-	vec3 skyColorOut;
+	vec3 skyColor = {0.5, 0.5, 0.6};
 
 	float deltaTime = 0.0;
 	float lastFrame = 0.0;
 	float currentFrame = 0.0;
 	while(!glfwWindowShouldClose(window->frame)) {	
-		ParseInput(input);
+		ParseInput(input, models, textures);
 
 		currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
@@ -116,8 +112,7 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 		glfwGetFramebufferSize(window->frame, &window->width, &window->height);
 		processInput(window, camera, deltaTime);
 
-		glm_vec3_mul(skyColorIn, models->model[2].color, skyColorOut);
-		glClearColor(skyColorOut[0], skyColorOut[1], skyColorOut[2], 1.0);
+		glClearColor(skyColor[0], skyColor[1], skyColor[2], 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glm_mat4_identity(transforms->view);
@@ -173,6 +168,9 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 		glfwSwapBuffers(window->frame);
 		glfwPollEvents();
 	}
+
+	printf("Closed window\n");
+	printf("Exiting program...\n");
 
 	return 0;
 }
@@ -302,7 +300,7 @@ void SetModelData(Model *model) {
 	glEnableVertexAttribArray(2);
 }
 
-int LoadTextures(struct Textures *textures) {
+int LoadTextures(Textures *textures) {
 	printf("Initializing texture data..\n");
 
 	printf("\n->Reading texture data..\n");
@@ -508,19 +506,18 @@ void InitializeStructs(Window *window, Textures *textures, Models *models, Trans
 
 	// MODEL 0
 	models->model[0].texture = 0;
-	glm_vec3_copy((vec3){0.1, 0.1, 0.1}, models->model[0].material.ambient);
-	glm_vec3_copy((vec3){0.45, 0.4, 0.4}, models->model[0].material.diffuse);
-	glm_vec3_copy((vec3){0.7, 0.6, 0.6}, models->model[0].material.specular);
+	glm_vec3_copy((vec3){0.05, 0.045, 0.04}, models->model[0].material.ambient);
+	glm_vec3_copy((vec3){0.5, 0.4, 0.3}, models->model[0].material.diffuse);
+	glm_vec3_copy((vec3){0.3, 0.3, 0.3}, models->model[0].material.specular);
 	models->model[0].material.shininess = 2;
 
 	glm_vec3_copy((vec3){0.9, 0.7, 0.3}, models->model[0].color);
 	models->model[0].transformCount = 8;
 	models->model[0].translate = malloc(sizeof(vec3) * models->model[0].transformCount);
-	for (int tr = 0; tr < models->model[0].transformCount; tr++) {
-		glm_vec3_copy(cubeT[tr], models->model[0].translate[tr]);
-	}
 	models->model[0].rotate = malloc(sizeof(vec3) * models->model[0].transformCount);
 	for (int tr = 0; tr < models->model[0].transformCount; tr++) {
+		glm_vec3_copy(cubeT[tr], models->model[0].translate[tr]);
+
 		glm_vec3_copy(cubeR[tr], models->model[0].rotate[tr]);
 		glm_vec3_normalize(models->model[0].rotate[tr]);
 	}
@@ -528,19 +525,18 @@ void InitializeStructs(Window *window, Textures *textures, Models *models, Trans
 
 	// MODEL 1
 	models->model[1].texture = 1;
-	glm_vec3_copy((vec3){0.1, 0.1, 0.1}, models->model[1].material.ambient);
-	glm_vec3_copy((vec3){0.5, 0.55, 0.6}, models->model[1].material.diffuse);
+	glm_vec3_copy((vec3){0.1, 0.15, 0.2}, models->model[1].material.ambient);
+	glm_vec3_copy((vec3){0.5, 0.6, 0.65}, models->model[1].material.diffuse);
 	glm_vec3_copy((vec3){1.0, 1.0, 1.0}, models->model[1].material.specular);
 	models->model[1].material.shininess = 128;
 
 	glm_vec3_copy((vec3){0.5, 0.6, 0.4}, models->model[1].color);
 	models->model[1].transformCount = 2;
 	models->model[1].translate = malloc(sizeof(vec3) * models->model[1].transformCount);
-	for (int tr = 0; tr < models->model[1].transformCount; tr++) {
-		glm_vec3_copy(floorT[tr], models->model[1].translate[tr]);
-	}
 	models->model[1].rotate = malloc(sizeof(vec3) * models->model[1].transformCount);
 	for (int tr = 0; tr < models->model[1].transformCount; tr++) {
+		glm_vec3_copy(floorT[tr], models->model[1].translate[tr]);
+
 		glm_vec3_copy(floorR[tr], models->model[1].rotate[tr]);
 		glm_vec3_normalize(models->model[1].rotate[tr]);
 	}
@@ -550,9 +546,9 @@ void InitializeStructs(Window *window, Textures *textures, Models *models, Trans
 	glm_vec3_copy((vec3){1.0, 1.0, 1.0}, models->model[2].color);
 	models->model[2].transformCount = 1;
 	models->model[2].translate = malloc(sizeof(vec3));
+	models->model[2].rotate = malloc(sizeof(vec3));
 	glm_vec3_copy(lightT, models->model[2].translate[0]);
 
-	models->model[2].rotate = malloc(sizeof(vec3));
 	glm_vec3_copy(lightR, models->model[2].rotate[0]);
 	glm_vec3_normalize(models->model[2].rotate[0]);
 

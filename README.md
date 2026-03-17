@@ -41,7 +41,7 @@ Loader generator - [GLAD](https://glad.dav1d.de/)
 - Transforms
 - Camera controls (keyboard and mouse)
 
-## List of future (hopefully) features
+## List of (Hopefully) future features
 
 # Rendering
 - Better lighting

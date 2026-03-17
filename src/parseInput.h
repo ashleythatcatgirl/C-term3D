@@ -5,6 +5,11 @@
 #include "main.h"
 
 void SetNonBlocking();
-int ParseInput(Input *input);
+int ParseInput(Input *input, Models *models, Textures *textures);
+int CheckInput(Input *input, Models *models, Textures *textures);
+
+void ShowHelp();
+void ToggleWireframe(Input *input);
+void SetTexture(Input *input, Models *models, Textures *textures);
 
 #endif

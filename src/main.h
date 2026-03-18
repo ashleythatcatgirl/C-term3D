@@ -28,6 +28,11 @@ const char OBJECT_DIRECTORY[] = "../files/objects/";
 const char TEXTURE_DIRECTORY[] = "../files/textures/";
 const char SHADER_DIRECTORY[] = "../src/shaders/";
 
+typedef enum {
+	OBJ_MODEL,
+	OBJ_LIGHT
+} ObjectType;
+
 typedef struct Window {
 	double delay;
 	int width;
@@ -45,8 +50,20 @@ typedef struct Material {
 	vec3 ambient;
 	vec3 diffuse;
 	vec3 specular;
+
+	vec3 color;
+
 	float shininess;
+	unsigned int texture;
 } Material;
+
+typedef struct Light {
+	vec3 ambient;
+	vec3 diffuse;
+	vec3 specular;
+
+	vec3 color;
+} Light;
 
 typedef struct Model {
 	unsigned int VBO;
@@ -59,10 +76,12 @@ typedef struct Model {
 	vec3 *rotate;
 	vec3 scale;
 
-	vec3 color;
-	unsigned int texture;
 
-	Material material;
+	ObjectType type;
+	union {
+		Material material;
+		Light light;
+	};
 } Model;
 
 typedef struct Models {
@@ -84,10 +103,6 @@ typedef struct Transforms {
 	mat4 model;
 	mat4 view;
 	mat4 projection;
-	
-	int modelLoc;
-	int viewLoc;
-	int projectionLoc;
 } Transforms;
 
 typedef struct Camera {
@@ -124,14 +139,17 @@ typedef struct Controls {
 	Mouse *mouse;
 } Controls;
 
-int ParseArgs(int argc, char **argv, struct Input *input);
+
+void InitializeStructs(Window *window, Input *input, Textures *textures, Models *models, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls);
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+void mouse_callback(GLFWwindow* window, double xPos, double yPos);
+void scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
 
 int CreateWindow(Window *window, Controls *controls);
 
 void SetModelData(Model *model);
 
-char* GetShaderContent(const char* fileName);
-int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *fragShader);
 
 int LoadTextures(Textures *textures);
 int LinkTextures(Textures *textures, unsigned int *shaderProgram);
@@ -139,13 +157,7 @@ int LinkTextures(Textures *textures, unsigned int *shaderProgram);
 int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Transforms *transforms, Camera *camera);
 void processInput(Window *window, Camera *camera, float deltaTime);
 
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xPos, double yPos);
-void scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
-
 void FreeMemory(Models *models, Textures *textures);
 
-void InitializeStructs(Window *window, Textures *textures, Models *models, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls);
 
 #endif

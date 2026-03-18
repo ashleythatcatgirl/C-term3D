@@ -1,6 +1,5 @@
 
 #include "main.h"
-#include <stdio.h>
 #include "parseInput.h"
 
 void SetNonBlocking() {
@@ -21,14 +20,17 @@ int ParseInput(Input *input, Models *models, Textures *textures) {
 }
 
 int CheckInput(Input *input, Models *models, Textures *textures) {
-	regex_t r1;
+	regex_t setTexture, setTranslate;
 	int regval;
-	regval = regcomp(&r1, "model [0-9][0-9]* texture [0-9][0-9]*", 0);
+	regval = regcomp(&setTexture, "texture [0-9][0-9]* [0-9][0-9]*", 0);
+	if (regval != 0) printf("fuck\n");
+	regval = regcomp(&setTranslate, "translate [0-9][0-9]* [0-9][0-9]* [xyz] [+-][0-9][0-9]*", 0);
 	if (regval != 0) printf("fuck\n");
 
 	if (!strcmp(input->buffer, "help\n")) ShowHelp();
 	else if (!strcmp(input->buffer, "wireframe\n")) ToggleWireframe(input);
-	else if (!regexec(&r1, input->buffer, 0, NULL, 0)) SetTexture(input, models, textures);
+	else if (!regexec(&setTexture, input->buffer, 0, NULL, 0)) SetTexture(input, models, textures);
+	else if (!regexec(&setTranslate, input->buffer, 0, NULL, 0)) SetTranslate(input, models);
 
 	return 0;
 }
@@ -37,9 +39,9 @@ void ShowHelp() {
 	printf("== C-term3D ==\n");
 	printf("\n");
 
-	printf(" wireframe \t\t toggle wireframe\n");
-	printf(" model 'm' texture 't' \t change texture of model 'm' to 't'\n");
-
+	printf(" wireframe \n toggle wireframe\n\n");
+	printf(" texture 'm' 't' \n change texture of model 'm' to 't'\n\n");
+	printf(" translate 'm' 't' 'a' 'p' \n translate model 'm' of transform 't' on axis 'a' to position 'p'\n\n");
 }
 
 void ToggleWireframe(Input *input) {
@@ -56,7 +58,29 @@ void ToggleWireframe(Input *input) {
 
 void SetTexture(Input *input, Models *models, Textures *textures) {
 	int obj, tex;
-	sscanf(input->buffer, "model %d texture %d\n", &obj, &tex);
+	sscanf(input->buffer, "texture %d %d\n", &obj, &tex);
 	if (obj >= models->count || tex > textures->count) return;
-	models->model[obj].texture = textures->texture[tex].memory;
+	if (models->model[obj].type != OBJ_MODEL) return;
+
+	models->model[obj].material.texture = textures->texture[tex].memory;
+}
+
+void SetTranslate(Input *input, Models *models) {
+	int obj, tr, pos;
+	char axis;
+	sscanf(input->buffer, "translate %d %d %c %d\n", &obj, &tr, &axis, &pos);
+	if (obj >= models->count) return;
+	if (tr >= models->model[obj].transformCount) return;
+	Model *model = &models->model[obj];
+	switch (axis) {
+	case 'x':
+		model->translate[tr][0] = pos;
+		break;
+	case 'y':
+		model->translate[tr][1] = pos;
+		break;
+	case 'z':
+		model->translate[tr][2] = pos;
+		break;
+	}
 }

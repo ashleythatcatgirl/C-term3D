@@ -76,7 +76,6 @@ typedef struct Model {
 	vec3 *rotate;
 	vec3 scale;
 
-
 	ObjectType type;
 	union {
 		Material material;
@@ -155,7 +154,7 @@ int LoadTextures(Textures *textures);
 int LinkTextures(Textures *textures, unsigned int *shaderProgram);
 
 int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Transforms *transforms, Camera *camera);
-void processInput(Window *window, Camera *camera, float deltaTime);
+void ProcessKeyInput(Window *window, Camera *camera, float deltaTime);
 
 void FreeMemory(Models *models, Textures *textures);
 

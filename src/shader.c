@@ -1,5 +1,6 @@
 
 #include "shader.h"
+#include "main.h"
 #include <stdbool.h>
 
 int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *fragShader) {
@@ -98,4 +99,22 @@ void ShaderSetVec3(unsigned int *shader, const char *name, vec3 *data) {
 void ShaderSetMat4(unsigned int *shader, const char *name, int gl_bool, float *data) {	
 	int location = glGetUniformLocation(*shader, name);
 	glUniformMatrix4fv(location, 1, gl_bool, data);
+}
+
+void UpdateShaderUniform(unsigned int *shader, Model *model, Model *light, Camera *camera) {
+	glUseProgram(*shader);
+
+	if (model->type == OBJ_MODEL) {
+		ShaderSetVec3(&model->shader, "material.specular", &model->material.specular);
+		ShaderSetFloat(&model->shader, "material.shininess", &model->material.shininess);
+
+		ShaderSetVec3(&model->shader, "light.ambient", &light->light.ambient);
+		ShaderSetVec3(&model->shader, "light.diffuse", &light->light.diffuse);
+		ShaderSetVec3(&model->shader, "light.specular", &light->light.specular);
+
+		ShaderSetVec3(&model->shader, "lightPos", &light->translate[0]);
+		ShaderSetVec3(&model->shader, "camPos", &camera->position);
+	} else if (model->type == OBJ_LIGHT) {
+		ShaderSetVec3(&model->shader, "light.color", &model->light.color);
+	}
 }

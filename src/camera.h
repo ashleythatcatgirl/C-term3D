@@ -8,8 +8,8 @@ void CameraMoveZ(Camera *camera, float moveSpeed);
 void CameraMoveX(Camera *camera, float moveSpeed);
 void CameraMoveY(Camera *camera, float moveSpeed);
 
-void CameraYaw(Camera *camera, float turnSpeed);
-void CameraPitch(Camera *camera, float turnSpeed);
+void CameraYaw(Camera *camera, float turnSpeed, GLFWwindow *window);
+void CameraPitch(Camera *camera, float turnSpeed, GLFWwindow *window);
 
 void CameraZoom(Camera *camera, float zoomSpeed);
 

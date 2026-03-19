@@ -2,6 +2,7 @@
 #include "camera.h"
 #include "include/cglm/vec3.h"
 #include "main.h"
+#include <GLFW/glfw3.h>
 
 void CameraMoveZ(Camera *camera, float moveSpeed) {
 	vec3 move;
@@ -21,7 +22,8 @@ void CameraMoveY(Camera *camera, float moveSpeed) {
 	glm_vec3_add(camera->position, move, camera->position);	
 }
 
-void CameraYaw(Camera *camera, float turnSpeed) {
+void CameraYaw(Camera *camera, float turnSpeed, GLFWwindow *window) {
+	if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_NORMAL) return; 
 	camera->yaw += turnSpeed;
 
 	glm_vec3_copy((vec3){
@@ -31,7 +33,8 @@ void CameraYaw(Camera *camera, float turnSpeed) {
 	}, camera->front);
 	glm_normalize(camera->front);
 }
-void CameraPitch(Camera *camera, float turnSpeed) {
+void CameraPitch(Camera *camera, float turnSpeed, GLFWwindow *window) {
+	if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_NORMAL) return; 
 	if (camera->pitch + turnSpeed <= -1.57
 	|| camera->pitch + turnSpeed >= 1.57) return;
 

@@ -8,6 +8,7 @@
 #include "parseInput.c"
 
 #include "verticies.c"
+#include <GLFW/glfw3.h>
 
 int main(int argc, char **argv) {
 	struct Window window;
@@ -40,25 +41,7 @@ int main(int argc, char **argv) {
 		else if (model->type == OBJ_LIGHT) LoadShader(&model->shader, "shaders/vertex/normal1.glsl", "shaders/fragment/light.glsl");
 
 		SetModelData(model);
-
-		glUseProgram(model->shader);
-		if (model->type == OBJ_MODEL) {
-			ShaderSetVec3(&model->shader, "material.ambient", &model->material.ambient);
-			ShaderSetVec3(&model->shader, "material.diffuse", &model->material.diffuse);
-			ShaderSetVec3(&model->shader, "material.specular", &model->material.specular);
-			ShaderSetFloat(&model->shader, "material.shininess", &model->material.shininess);
-
-			ShaderSetVec3(&model->shader, "objectColor", &model->material.color);
-
-			ShaderSetVec3(&model->shader, "lightPos", &models.model[2].translate[0]);
-			ShaderSetVec3(&model->shader, "camPos", &camera.position);
-		} else if (model->type == OBJ_LIGHT) {
-			ShaderSetVec3(&model->shader, "light.ambient", &model->light.ambient);
-			ShaderSetVec3(&model->shader, "light.diffuse", &model->light.diffuse);
-			ShaderSetVec3(&model->shader, "light.specular", &model->light.specular);
-		}
-
-		ShaderSetVec3(&model->shader, "lightColor", &models.model[2].light.color);
+		UpdateShaderUniform(&model->shader, model, &models.model[2], &camera);
 	}
 
 	switch (LoadTextures(&textures)) {
@@ -112,7 +95,7 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 		lastFrame = currentFrame;
 
 		glfwGetFramebufferSize(window->frame, &window->width, &window->height);
-		processInput(window, camera, deltaTime);
+		ProcessKeyInput(window, camera, deltaTime);
 
 		glClearColor(skyColor[0], skyColor[1], skyColor[2], 1.0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -137,11 +120,15 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 			glBindVertexArray(model->VAO);
 			for (int tr = 0; tr < model->transformCount; tr++) {
 				glm_mat4_identity(transforms->model);
-				//if (obj == 2 ) { glm_vec3_rotate(models->model[2].translate[0], deltaTime/2, models->model[2].rotate[tr]); }
 
-				ShaderSetVec3(&model->shader, "lightPos", &models->model[2].translate[0]);
-				ShaderSetVec3(&model->shader, "lightColor", &models->model[2].light.color);
-				ShaderSetVec3(&model->shader, "camPos", &camera->position);
+				/*
+				glm_vec3_copy((vec3){fabs(sin(glfwGetTime())), fabs(sin(glfwGetTime() - 1.05)), fabs(sin(glfwGetTime() - 2.10))}, models->model[2].light.color);
+				glm_vec3_copy(models->model[2].light.color, models->model[2].light.specular);
+				glm_vec3_mul(models->model[2].light.color, (vec3){0.9, 0.9, 0.9}, models->model[2].light.diffuse);
+				glm_vec3_mul(models->model[2].light.diffuse, (vec3){0.9, 0.9, 0.9}, models->model[2].light.ambient);
+				*/
+
+				UpdateShaderUniform(&model->shader, model, &models->model[2], camera);
 
 				glm_translate(transforms->model, model->translate[tr]);
 				for (int i = 0; i < 3; i++) {
@@ -167,15 +154,15 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 	return 0;
 }
 
-void processInput(Window *window, Camera *camera, float deltaTime) {
+void ProcessKeyInput(Window *window, Camera *camera, float deltaTime) {
 	if(glfwGetKey(window->frame, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window->frame, true);
 	}
 	if(glfwGetKey(window->frame, GLFW_KEY_TAB) == GLFW_PRESS
-	&& window->delay < glfwGetTime() - 0.1) {
+	&& window->delay < glfwGetTime() - 0.25) {
 		window->delay = glfwGetTime();
 		glfwSetInputMode(window->frame, GLFW_CURSOR,
-		glfwGetInputMode(window->frame, GLFW_CURSOR) == GLFW_CURSOR_DISABLED ?
+		glfwGetInputMode(window->frame, GLFW_CURSOR) == GLFW_CURSOR_DISABLED?
 		GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 	}
 
@@ -189,10 +176,11 @@ void processInput(Window *window, Camera *camera, float deltaTime) {
 	if(glfwGetKey(window->frame, GLFW_KEY_D) == GLFW_PRESS) CameraMoveX(camera, -moveSpeed);
 	if(glfwGetKey(window->frame, GLFW_KEY_E) == GLFW_PRESS) CameraMoveY(camera, moveSpeed);
 	if(glfwGetKey(window->frame, GLFW_KEY_Q) == GLFW_PRESS) CameraMoveY(camera, -moveSpeed);
-	if(glfwGetKey(window->frame, GLFW_KEY_RIGHT) == GLFW_PRESS) CameraYaw(camera, turnSpeed);
-	if(glfwGetKey(window->frame, GLFW_KEY_LEFT) == GLFW_PRESS) CameraYaw(camera, -turnSpeed);
-	if(glfwGetKey(window->frame, GLFW_KEY_UP) == GLFW_PRESS) CameraPitch(camera, turnSpeed);
-	if(glfwGetKey(window->frame, GLFW_KEY_DOWN) == GLFW_PRESS) CameraPitch(camera, -turnSpeed);
+
+	if(glfwGetKey(window->frame, GLFW_KEY_RIGHT) == GLFW_PRESS) CameraYaw(camera, turnSpeed, window->frame);
+	if(glfwGetKey(window->frame, GLFW_KEY_LEFT) == GLFW_PRESS) CameraYaw(camera, -turnSpeed, window->frame);
+	if(glfwGetKey(window->frame, GLFW_KEY_UP) == GLFW_PRESS) CameraPitch(camera, turnSpeed, window->frame);
+	if(glfwGetKey(window->frame, GLFW_KEY_DOWN) == GLFW_PRESS) CameraPitch(camera, -turnSpeed, window->frame);
 	if(glfwGetKey(window->frame, GLFW_KEY_C) == GLFW_PRESS) CameraZoom(camera, 1);
 	if(glfwGetKey(window->frame, GLFW_KEY_Z) == GLFW_PRESS) CameraZoom(camera, -1);
 }
@@ -331,8 +319,8 @@ void mouse_callback(GLFWwindow* window, double xPos, double yPos) {
 	controls->mouse->lastX = xPos;
 	controls->mouse->lastY = yPos;
 	
-	CameraYaw(controls->camera, controls->mouse->xOffset);
-	CameraPitch(controls->camera, controls->mouse->yOffset);
+	CameraYaw(controls->camera, controls->mouse->xOffset, window);
+	CameraPitch(controls->camera, controls->mouse->yOffset, window);
 }
 
 void scroll_callback(GLFWwindow *window, double xOffset, double yOffset) {
@@ -435,8 +423,8 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	models->model[1].material.texture = 1;
 
 	glm_vec3_copy((vec3){0.05, 0.045, 0.04}, models->model[0].material.ambient);
-	glm_vec3_copy((vec3){0.5, 0.4, 0.3}, models->model[0].material.diffuse);
-	glm_vec3_copy((vec3){0.3, 0.3, 0.3}, models->model[0].material.specular);
+	glm_vec3_copy((vec3){0.4, 0.3, 0.25}, models->model[0].material.diffuse);
+	glm_vec3_copy((vec3){0.1, 0.1, 0.1}, models->model[0].material.specular);
 	models->model[0].material.shininess = 2;
 	glm_vec3_copy((vec3){0.9, 0.7, 0.3}, models->model[0].material.color);
 
@@ -455,8 +443,8 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 
 	// MODEL 1
 	glm_vec3_copy((vec3){0.1, 0.15, 0.2}, models->model[1].material.ambient);
-	glm_vec3_copy((vec3){0.5, 0.6, 0.65}, models->model[1].material.diffuse);
-	glm_vec3_copy((vec3){1.0, 1.0, 1.0}, models->model[1].material.specular);
+	glm_vec3_copy((vec3){0.4, 0.5, 0.55}, models->model[1].material.diffuse);
+	glm_vec3_copy((vec3){0.6, 0.6, 0.6}, models->model[1].material.specular);
 	models->model[1].material.shininess = 128;
 	glm_vec3_copy((vec3){0.5, 0.6, 0.4}, models->model[1].material.color);
 
@@ -470,6 +458,11 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 
 	// MODEL 2
 	glm_vec3_copy((vec3){1.0, 1.0, 1.0}, models->model[2].light.color);
+
+	glm_vec3_copy(models->model[2].light.color, models->model[2].light.specular);
+	glm_vec3_mul(models->model[2].light.color, (vec3){0.9, 0.9, 0.9}, models->model[2].light.diffuse);
+	glm_vec3_mul(models->model[2].light.diffuse, (vec3){0.3, 0.3, 0.3}, models->model[2].light.ambient);
+
 	glm_vec3_copy(lightT, models->model[2].translate[0]);
 
 	glm_vec3_copy(lightR, models->model[2].rotate[0]);

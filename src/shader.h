@@ -11,4 +11,6 @@ void ShaderSetMat4(unsigned int *shader, const char *name, int gl_bool, float *d
 void ShaderSetFloat(unsigned int *shader, const char *name, float *data);
 void ShaderSetInt(unsigned int *shader, const char *name, int *data);
 
+void UpdateShaderUniform(unsigned int *shader, Model *model, Model *light, Camera *camera);
+
 #endif

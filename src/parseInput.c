@@ -66,9 +66,10 @@ void SetTexture(Input *input, Models *models, Textures *textures) {
 }
 
 void SetTranslate(Input *input, Models *models) {
-	int obj, tr, pos;
+	int obj, tr;
+	float pos;
 	char axis;
-	sscanf(input->buffer, "translate %d %d %c %d\n", &obj, &tr, &axis, &pos);
+	sscanf(input->buffer, "translate %d %d %c %f\n", &obj, &tr, &axis, &pos);
 	if (obj >= models->count) return;
 	if (tr >= models->model[obj].transformCount) return;
 	Model *model = &models->model[obj];

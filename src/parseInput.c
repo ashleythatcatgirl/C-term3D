@@ -1,5 +1,6 @@
 
 #include "main.h"
+#include <regex.h>
 #include "parseInput.h"
 
 void SetNonBlocking() {
@@ -22,15 +23,20 @@ int ParseInput(Input *input, Models *models, Textures *textures) {
 int CheckInput(Input *input, Models *models, Textures *textures) {
 	regex_t setTexture, setTranslate;
 	int regval;
-	regval = regcomp(&setTexture, "texture [0-9][0-9]* [0-9][0-9]*", 0);
-	if (regval != 0) printf("fuck\n");
-	regval = regcomp(&setTranslate, "translate [0-9][0-9]* [0-9][0-9]* [xyz] [+-][0-9][0-9]*", 0);
-	if (regval != 0) printf("fuck\n");
+	regval = regcomp(&setTexture,
+			"texture [0-9][0-9]* [0-9][0-9]*", 0);
+	if (regval != 0) return 1;
+	regval = regcomp(&setTranslate,
+			"translate [0-9][0-9]* [0-9][0-9]* [xyz] [+-][0-9][0-9]*", 0);
+	if (regval != 0) return 1;
 
 	if (!strcmp(input->buffer, "help\n")) ShowHelp();
 	else if (!strcmp(input->buffer, "wireframe\n")) ToggleWireframe(input);
-	else if (!regexec(&setTexture, input->buffer, 0, NULL, 0)) SetTexture(input, models, textures);
+	else if (!regexec(&setTexture, input->buffer, 0, NULL, 0)) SetTexture(input, models, &textures->count);
 	else if (!regexec(&setTranslate, input->buffer, 0, NULL, 0)) SetTranslate(input, models);
+
+	regfree(&setTranslate);
+	regfree(&setTexture);
 
 	return 0;
 }
@@ -56,13 +62,13 @@ void ToggleWireframe(Input *input) {
 	}
 }
 
-void SetTexture(Input *input, Models *models, Textures *textures) {
+void SetTexture(Input *input, Models *models, unsigned int *textureCount) {
 	int obj, tex;
 	sscanf(input->buffer, "texture %d %d\n", &obj, &tex);
-	if (obj >= models->count || tex > textures->count) return;
+	if (obj >= models->count || tex >= *textureCount) return;
 	if (models->model[obj].type != OBJ_MODEL) return;
 
-	models->model[obj].material.texture = textures->texture[tex].memory;
+	models->model[obj].data.material.textureDiffuse = tex;
 }
 
 void SetTranslate(Input *input, Models *models) {

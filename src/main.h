@@ -47,14 +47,13 @@ typedef struct Input {
 } Input;
 
 typedef struct Material {
-	vec3 ambient;
 	vec3 diffuse;
 	vec3 specular;
 
 	vec3 color;
 
 	float shininess;
-	unsigned int texture;
+	unsigned int textureDiffuse;
 } Material;
 
 typedef struct Light {
@@ -80,7 +79,7 @@ typedef struct Model {
 	union {
 		Material material;
 		Light light;
-	};
+	} data;
 } Model;
 
 typedef struct Models {

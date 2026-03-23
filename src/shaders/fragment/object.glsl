@@ -21,7 +21,6 @@ struct Light {
 uniform Material material;
 uniform Light light;
 
-
 in vec3 fragPos;
 uniform vec3 lightPos;
 uniform vec3 camPos;

@@ -10,7 +10,7 @@ int CheckInput(Input *input, Models *models, Textures *textures);
 
 void ShowHelp();
 void ToggleWireframe(Input *input);
-void SetTexture(Input *input, Models *models, Textures *textures);
+void SetTexture(Input *input, Models *models, unsigned int *textureCount);
 void SetTranslate(Input *input, Models *models);
 
 #endif

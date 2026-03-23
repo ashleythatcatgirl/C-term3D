@@ -30,8 +30,7 @@ int main(int argc, char **argv) {
 		break;
 	case 1:
 		printf("Window failed to create\n");
-		glfwTerminate();
-		break;
+		goto exitProgram;
 	}
 
 	printf("Initializing object vertex data..\n");
@@ -53,21 +52,23 @@ int main(int argc, char **argv) {
 		break;
 	case -1:
 		printf("\nTexture loading failed\n");
-		glfwTerminate();
-		return 1;
+		goto exitProgram;
 	}
 
-	for (int i = 0; i < 2; i++) {
+	/*for (int i = 0; i < 2; i++) {
 		printf("Model %d textures\n", i);
 		LinkTextures(&textures, &models.model[i].shader);
-	}
+	}*/
 
 	printf("Loading successful, press enter to continue..");
 	getchar();
 
 	RenderLoop(&window, &input, &models, &textures, &transforms, &camera);
+
+exitProgram:
 	FreeMemory(&models, &textures);
 
+	glfwDestroyWindow(window.frame);
 	glfwTerminate();
 
 	return 0;
@@ -109,8 +110,11 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 
 		for (int obj = 0; obj < models->count; obj++) {
 			Model *model = &models->model[obj];
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, textures->texture[model->material.texture].memory);
+
+			if (models->model[obj].type != OBJ_LIGHT) {
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, textures->texture[model->data.material.textureDiffuse].memory);
+			}
 
 			glUseProgram(model->shader);
 
@@ -120,13 +124,6 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 			glBindVertexArray(model->VAO);
 			for (int tr = 0; tr < model->transformCount; tr++) {
 				glm_mat4_identity(transforms->model);
-
-				/*
-				glm_vec3_copy((vec3){fabs(sin(glfwGetTime())), fabs(sin(glfwGetTime() - 1.05)), fabs(sin(glfwGetTime() - 2.10))}, models->model[2].light.color);
-				glm_vec3_copy(models->model[2].light.color, models->model[2].light.specular);
-				glm_vec3_mul(models->model[2].light.color, (vec3){0.9, 0.9, 0.9}, models->model[2].light.diffuse);
-				glm_vec3_mul(models->model[2].light.diffuse, (vec3){0.9, 0.9, 0.9}, models->model[2].light.ambient);
-				*/
 
 				UpdateShaderUniform(&model->shader, model, &models->model[2], camera);
 
@@ -274,10 +271,11 @@ int LoadTextures(Textures *textures) {
 }
 
 int LinkTextures(Textures *textures, unsigned int *shaderProgram) {
-	printf("\n->Linking texture data..\n");
+	/*printf("\n->Linking texture data..\n");
 	glUseProgram(*shaderProgram);
 
 	glUniform1i(glGetUniformLocation(*shaderProgram, "texture1"), 0);
+	*/
 
 	return 0;
 }
@@ -285,6 +283,9 @@ int LinkTextures(Textures *textures, unsigned int *shaderProgram) {
 void FreeMemory(Models *models, Textures *textures) {
 	if (models->model != NULL) {
 		for (int obj = 0; obj < models->count; obj++) {
+			if (models->model[obj].translate != NULL) free(models->model[obj].translate);
+			if (models->model[obj].rotate != NULL) free(models->model[obj].rotate);
+
  	   		glDeleteBuffers(1, &models->model[obj].VBO);
 			glDeleteVertexArrays(1, &models->model[obj].VAO);
 
@@ -419,14 +420,11 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	models->model[1].transformCount = 2;
 	models->model[2].transformCount = 1;
 
-	models->model[0].material.texture = 0;
-	models->model[1].material.texture = 1;
+	models->model[0].data.material.textureDiffuse = 0;
+	models->model[1].data.material.textureDiffuse = 1;
 
-	glm_vec3_copy((vec3){0.05, 0.045, 0.04}, models->model[0].material.ambient);
-	glm_vec3_copy((vec3){0.4, 0.3, 0.25}, models->model[0].material.diffuse);
-	glm_vec3_copy((vec3){0.1, 0.1, 0.1}, models->model[0].material.specular);
-	models->model[0].material.shininess = 2;
-	glm_vec3_copy((vec3){0.9, 0.7, 0.3}, models->model[0].material.color);
+	glm_vec3_copy((vec3){0.1, 0.1, 0.1}, models->model[0].data.material.specular);
+	models->model[0].data.material.shininess = 2;
 
 	for (int obj = 0; obj < models->count; obj++) {
 		models->model[obj].translate = malloc(sizeof(vec3) * models->model[obj].transformCount);
@@ -442,11 +440,8 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	glm_vec3_copy(cubeS, models->model[0].scale);
 
 	// MODEL 1
-	glm_vec3_copy((vec3){0.1, 0.15, 0.2}, models->model[1].material.ambient);
-	glm_vec3_copy((vec3){0.4, 0.5, 0.55}, models->model[1].material.diffuse);
-	glm_vec3_copy((vec3){0.6, 0.6, 0.6}, models->model[1].material.specular);
-	models->model[1].material.shininess = 128;
-	glm_vec3_copy((vec3){0.5, 0.6, 0.4}, models->model[1].material.color);
+	glm_vec3_copy((vec3){0.6, 0.6, 0.6}, models->model[1].data.material.specular);
+	models->model[1].data.material.shininess = 128;
 
 	for (int tr = 0; tr < models->model[1].transformCount; tr++) {
 		glm_vec3_copy(floorT[tr], models->model[1].translate[tr]);
@@ -457,11 +452,11 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	glm_vec3_copy(floorS, models->model[1].scale);
 
 	// MODEL 2
-	glm_vec3_copy((vec3){1.0, 1.0, 1.0}, models->model[2].light.color);
+	glm_vec3_copy((vec3){1.0, 1.0, 1.0}, models->model[2].data.light.color);
 
-	glm_vec3_copy(models->model[2].light.color, models->model[2].light.specular);
-	glm_vec3_mul(models->model[2].light.color, (vec3){0.9, 0.9, 0.9}, models->model[2].light.diffuse);
-	glm_vec3_mul(models->model[2].light.diffuse, (vec3){0.3, 0.3, 0.3}, models->model[2].light.ambient);
+	glm_vec3_copy(models->model[2].data.light.color, models->model[2].data.light.specular);
+	glm_vec3_mul(models->model[2].data.light.color, (vec3){0.8, 0.8, 0.8}, models->model[2].data.light.diffuse);
+	glm_vec3_mul(models->model[2].data.light.diffuse, (vec3){0.2, 0.2, 0.2}, models->model[2].data.light.ambient);
 
 	glm_vec3_copy(lightT, models->model[2].translate[0]);
 
@@ -482,7 +477,7 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	mouse->lastY = (float)INIT_HEIGHT / 2;
 	mouse->xOffset = 0;
 	mouse->yOffset = 0;
-	mouse->sensitivity = 0.01;
+	mouse->sensitivity = 0.005;
 	mouse->firstMouse = true;
 
 	controls->camera = camera;

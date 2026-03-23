@@ -48,6 +48,9 @@ int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
 
+	free((char*)vertexShaderSource);
+	free((char*)fragmentShaderSource);
+	
 	return 0;
 }
 
@@ -91,6 +94,11 @@ void ShaderSetInt(unsigned int *shader, const char *name, int *data) {
 	glUniform1i(location, *data);
 }
 
+void ShaderSetUInt(unsigned int *shader, const char *name, unsigned int *data) {	
+	int location = glGetUniformLocation(*shader, name);
+	glUniform1ui(location, *data);
+}
+
 void ShaderSetVec3(unsigned int *shader, const char *name, vec3 *data) {	
 	int location = glGetUniformLocation(*shader, name);
 	glUniform3fv(location, 1, *data);
@@ -105,16 +113,17 @@ void UpdateShaderUniform(unsigned int *shader, Model *model, Model *light, Camer
 	glUseProgram(*shader);
 
 	if (model->type == OBJ_MODEL) {
-		ShaderSetVec3(&model->shader, "material.specular", &model->material.specular);
-		ShaderSetFloat(&model->shader, "material.shininess", &model->material.shininess);
+		ShaderSetUInt(&model->shader, "material.textureDiffuse", &model->data.material.textureDiffuse);
+		ShaderSetVec3(&model->shader, "material.specular", &model->data.material.specular);
+		ShaderSetFloat(&model->shader, "material.shininess", &model->data.material.shininess);
 
-		ShaderSetVec3(&model->shader, "light.ambient", &light->light.ambient);
-		ShaderSetVec3(&model->shader, "light.diffuse", &light->light.diffuse);
-		ShaderSetVec3(&model->shader, "light.specular", &light->light.specular);
+		ShaderSetVec3(&model->shader, "light.ambient", &light->data.light.ambient);
+		ShaderSetVec3(&model->shader, "light.diffuse", &light->data.light.diffuse);
+		ShaderSetVec3(&model->shader, "light.specular", &light->data.light.specular);
 
 		ShaderSetVec3(&model->shader, "lightPos", &light->translate[0]);
 		ShaderSetVec3(&model->shader, "camPos", &camera->position);
 	} else if (model->type == OBJ_LIGHT) {
-		ShaderSetVec3(&model->shader, "light.color", &model->light.color);
+		ShaderSetVec3(&model->shader, "light.color", &model->data.light.color);
 	}
 }

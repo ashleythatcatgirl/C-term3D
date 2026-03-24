@@ -47,13 +47,9 @@ typedef struct Input {
 } Input;
 
 typedef struct Material {
-	vec3 diffuse;
-	vec3 specular;
-
-	vec3 color;
+	unsigned int texture;
 
 	float shininess;
-	unsigned int textureDiffuse;
 } Material;
 
 typedef struct Light {
@@ -87,9 +83,17 @@ typedef struct Models {
 	Model *model;
 } Models;
 
-typedef struct Texture {
+typedef struct Tex {
 	unsigned int memory;
 	char name[64];
+} Tex;
+
+typedef struct Texture {
+	Tex *diffuse;
+	Tex *specular;
+
+	unsigned int diffuseCount;
+	unsigned int specularCount;
 } Texture;
 
 typedef struct Textures {

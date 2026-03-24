@@ -68,7 +68,7 @@ void SetTexture(Input *input, Models *models, unsigned int *textureCount) {
 	if (obj >= models->count || tex >= *textureCount) return;
 	if (models->model[obj].type != OBJ_MODEL) return;
 
-	models->model[obj].data.material.textureDiffuse = tex;
+	models->model[obj].data.material.texture = tex;
 }
 
 void SetTranslate(Input *input, Models *models) {

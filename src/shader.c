@@ -113,8 +113,8 @@ void UpdateShaderUniform(unsigned int *shader, Model *model, Model *light, Camer
 	glUseProgram(*shader);
 
 	if (model->type == OBJ_MODEL) {
-		ShaderSetUInt(&model->shader, "material.textureDiffuse", &model->data.material.textureDiffuse);
-		ShaderSetVec3(&model->shader, "material.specular", &model->data.material.specular);
+		ShaderSetUInt(&model->shader, "material.diffuse", &model->data.material.texture);
+		ShaderSetUInt(&model->shader, "material.specular", &model->data.material.texture);
 		ShaderSetFloat(&model->shader, "material.shininess", &model->data.material.shininess);
 
 		ShaderSetVec3(&model->shader, "light.ambient", &light->data.light.ambient);

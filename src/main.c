@@ -9,6 +9,10 @@
 
 #include "verticies.c"
 #include <GLFW/glfw3.h>
+#include <dirent.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 int main(int argc, char **argv) {
 	struct Window window;
@@ -36,8 +40,10 @@ int main(int argc, char **argv) {
 	printf("Initializing object vertex data..\n");
 	for (int obj = 0; obj < models.count; obj++) {
 		Model *model = &models.model[obj];
-		if (model->type == OBJ_MODEL) LoadShader(&model->shader, "shaders/vertex/normal1.glsl", "shaders/fragment/object.glsl");
-		else if (model->type == OBJ_LIGHT) LoadShader(&model->shader, "shaders/vertex/normal1.glsl", "shaders/fragment/light.glsl");
+		if (model->type == OBJ_MODEL)
+			LoadShader(&model->shader, "shaders/vertex/normal1.glsl", "shaders/fragment/object.glsl");
+		else if (model->type == OBJ_LIGHT)
+			LoadShader(&model->shader, "shaders/vertex/normal1.glsl", "shaders/fragment/light.glsl");
 
 		SetModelData(model);
 		UpdateShaderUniform(&model->shader, model, &models.model[2], &camera);
@@ -113,7 +119,13 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 
 			if (models->model[obj].type != OBJ_LIGHT) {
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, textures->texture[model->data.material.textureDiffuse].memory);
+				if (textures->texture[model->data.material.texture].diffuse != NULL) {
+					glBindTexture(GL_TEXTURE_2D, textures->texture[model->data.material.texture].diffuse[0].memory);
+				}
+				glActiveTexture(GL_TEXTURE1);
+				if (textures->texture[model->data.material.texture].specular != NULL) {
+					glBindTexture(GL_TEXTURE_2D, textures->texture[model->data.material.texture].specular[0].memory);
+				}
 			}
 
 			glUseProgram(model->shader);
@@ -205,66 +217,149 @@ int LoadTextures(Textures *textures) {
 	printf("Initializing texture data..\n");
 
 	printf("\n->Reading texture data..\n");
-	struct dirent *de;
-	DIR *dr = opendir(TEXTURE_DIRECTORY);
-	if (dr == NULL) return 1;
-	printf("  ->Found texture folder!\n");
+	struct dirent *de1, *de2;
+	DIR *dr1 = NULL, *dr2 = NULL;
+	
+	if ((dr1 = opendir(TEXTURE_DIRECTORY)) == NULL) return 1;
 
+	textures->texture = (Texture*)malloc(sizeof(Texture) * 1);
+	if (textures->texture == NULL) return -1;
+
+	char subDir[64], textureName[64];
 	char *end = NULL;
-	while ((de = readdir(dr)) != NULL) {
-		if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) continue;
+	int a = 0;
+	bool diffuse = false, specular = false;
+	Texture *texture = NULL;
+	while ((de1 = readdir(dr1)) != NULL) {
+		if (de1->d_name[0] == '.') continue;
+		printf("\n  ->Texture %s\n", de1->d_name);
 
-		if ((end = strchr(de->d_name, '.')) == NULL) continue;
-		if (strcmp(end, ".png") && strcmp(end,".jpg")) continue;
+		strcpy(subDir, "../files/textures/");
+		strcat(subDir, de1->d_name);
+		strcat(subDir, "/\0");
+
+		if ((dr2 = opendir(subDir)) == NULL) continue;
+
+		if (a == 1) {
+			Texture *temp = NULL;
+			temp = (Texture*)realloc(textures->texture, sizeof(Texture) * (textures->count + 1));
+			if (temp == NULL) return -1;
+
+			textures->texture = temp;
+		}
+		texture = &textures->texture[textures->count];
+		texture->diffuseCount = 0;
+		texture->specularCount = 0;
+		texture->diffuse = NULL;
+		texture->specular = NULL;
+
+		strcpy(textureName, TEXTURE_DIRECTORY);
+		strcat(textureName, de1->d_name);
+		strcat(textureName, "/\0");
+
+		a = 0;
+
+		while ((de2 = readdir(dr2)) != NULL) {
+			diffuse = false, specular = false;
+			if (de2->d_name[0] == '.') continue;
+			
+			if ((end = strchr(de2->d_name, '.')) == NULL) continue;
+			if (strcmp(end, ".png") && strcmp(end,".jpg")) continue;
+
+			if (strstr(de2->d_name, "diffuse") != NULL) diffuse = true;
+			if (strstr(de2->d_name, "specular") != NULL) specular = true;
+			if (diffuse == false && specular == false) continue;
+
+			printf("    ->%s\n", de2->d_name);
+
+			if (diffuse == true) {
+				texture->diffuseCount++;
+				if (texture->diffuse == NULL) {
+					texture->diffuse = malloc(sizeof(Tex));
+					if (texture->diffuse == NULL) return -1;
+				} else {
+					Tex *temp = NULL;
+					temp = realloc(texture->diffuse, sizeof(Tex) * texture->diffuseCount);
+					if (temp == NULL) return -1;
+
+					texture->diffuse = temp;
+				}
+				strcpy(texture->diffuse[0].name, textureName);
+				strcat(texture->diffuse[0].name, de2->d_name);
+			} else if (specular == true) {
+				texture->specularCount++;
+				if (texture->specular == NULL) {
+					texture->specular = malloc(sizeof(Tex));
+					if (texture->specular == NULL) return -1;
+				} else {
+					Tex *temp = NULL;
+					temp = realloc(texture->specular, sizeof(Tex) * texture->specularCount);
+					if (temp == NULL) return -1;
+
+					texture->specular = temp;
+
+				}
+				texture->specular = malloc(sizeof(Tex));
+				strcpy(texture->specular[0].name, textureName);
+				strcat(texture->specular[0].name, de2->d_name);
+			}
+
+			a = 1;
+		}
+		closedir(dr2);
+
+		if (a == 0) continue;
 
 		textures->count++;
 	}
+	closedir(dr1);
 
-	closedir(dr);
-
-	if (textures->count == 0) return 1;
-
-	textures->texture = (Texture*)malloc(sizeof(Texture) * textures->count);
-	if (textures->texture == NULL) return -1;
-
-	dr = opendir(TEXTURE_DIRECTORY);
-
-	for (int tex = 0; (de = readdir(dr)) != NULL;) {
-		if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) continue;
-
-		if ((end = strchr(de->d_name, '.')) == NULL) continue;
-		if (strcmp(end, ".png") && strcmp(end,".jpg")) continue;
-
-		strcpy(textures->texture[tex].name, TEXTURE_DIRECTORY);
-		strcat(textures->texture[tex].name, de->d_name);
-		printf("    ->Texture[%d]: %s\n", tex, textures->texture[tex].name);
-		tex++;
-	}
-
-	closedir(dr);
-
+	// end
+	
 	unsigned char *data;
 	int textureWidth, textureHeight, colorChannels;
 
 	stbi_set_flip_vertically_on_load(true);
 	printf("\n->Setting texture data..\n");
 	for (int i = 0; i < textures->count; i++) {
-		printf("  ->Texture[%d]\n", i);
-		glGenTextures(1, &textures->texture[i].memory);
-		glBindTexture(GL_TEXTURE_2D, textures->texture[i].memory);
+		texture = &textures->texture[i];
+		if (texture->diffuse != NULL) {
+			printf("  ->Texture[%d] dif\n", i);
+			glGenTextures(1, &texture->diffuse[0].memory);
+			glBindTexture(GL_TEXTURE_2D, texture->diffuse[0].memory);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		data = stbi_load(textures->texture[i].name, &textureWidth, &textureHeight, &colorChannels, 4);
-		if (!data) return -1;
+			data = stbi_load(texture->diffuse[0].name, &textureWidth, &textureHeight, &colorChannels, 4);
+			if (!data) return -1;
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,  GL_RGBA, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,  GL_RGBA, GL_UNSIGNED_BYTE, data);
+			glGenerateMipmap(GL_TEXTURE_2D);
 
-		stbi_image_free(data);
+			stbi_image_free(data);
+		}
+
+		if (texture->specular != NULL) {
+			printf("  ->Texture[%d] spec\n", i);
+			glGenTextures(1, &texture->specular[0].memory);
+			glBindTexture(GL_TEXTURE_2D, texture->specular[0].memory);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			data = stbi_load(texture->specular[0].name, &textureWidth, &textureHeight, &colorChannels, 4);
+			if (!data) return -1;
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,  GL_RGBA, GL_UNSIGNED_BYTE, data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+
+			stbi_image_free(data);
+		}
 	}
 
 	return 0;
@@ -420,10 +515,9 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	models->model[1].transformCount = 2;
 	models->model[2].transformCount = 1;
 
-	models->model[0].data.material.textureDiffuse = 0;
-	models->model[1].data.material.textureDiffuse = 1;
+	models->model[0].data.material.texture = 1;
+	models->model[1].data.material.texture = 0;
 
-	glm_vec3_copy((vec3){0.1, 0.1, 0.1}, models->model[0].data.material.specular);
 	models->model[0].data.material.shininess = 2;
 
 	for (int obj = 0; obj < models->count; obj++) {
@@ -440,7 +534,6 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	glm_vec3_copy(cubeS, models->model[0].scale);
 
 	// MODEL 1
-	glm_vec3_copy((vec3){0.6, 0.6, 0.6}, models->model[1].data.material.specular);
 	models->model[1].data.material.shininess = 128;
 
 	for (int tr = 0; tr < models->model[1].transformCount; tr++) {

@@ -1,13 +1,16 @@
 
 #include "main.h"
 
+#include "include/cglm/vec3.h"
 #include "include/glad.c"
 
 #include "shader.c"
-#include "camera.c"
 #include "parseInput.c"
+#include "controls.c"
+#include "window.c"
 
 #include "verticies.c"
+
 #include <GLFW/glfw3.h>
 #include <dirent.h>
 #include <stdio.h>
@@ -42,7 +45,7 @@ int main(int argc, char **argv) {
 		Model *model = &models.model[obj];
 		if (model->type == OBJ_MODEL)
 			LoadShader(&model->shader, "shaders/vertex/normal1.glsl", "shaders/fragment/object.glsl");
-		else if (model->type == OBJ_LIGHT)
+		else if (model->type == OBJ_LIGHT_POINT)
 			LoadShader(&model->shader, "shaders/vertex/normal1.glsl", "shaders/fragment/light.glsl");
 
 		SetModelData(model);
@@ -114,10 +117,13 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 		glm_mat4_identity(transforms->projection);
 		glm_perspective(glm_rad(camera->zoom), (float)window->width/(float)window->height, 0.1, 100.0, transforms->projection);
 
+		//glm_vec3_copy((vec3){fabs(sin(glfwGetTime())), fabs(sin(2 * glfwGetTime())), fabs(sin(3 * glfwGetTime()))}, models->model[2].data.light.color);
+		//UpdateLight(&models->model[2]);
+
 		for (int obj = 0; obj < models->count; obj++) {
 			Model *model = &models->model[obj];
 
-			if (models->model[obj].type != OBJ_LIGHT) {
+			if (models->model[obj].type == OBJ_MODEL) {
 				glActiveTexture(GL_TEXTURE0);
 				if (textures->texture[model->data.material.texture].diffuse != NULL) {
 					glBindTexture(GL_TEXTURE_2D, textures->texture[model->data.material.texture].diffuse[0].memory);
@@ -163,36 +169,6 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 	return 0;
 }
 
-void ProcessKeyInput(Window *window, Camera *camera, float deltaTime) {
-	if(glfwGetKey(window->frame, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window->frame, true);
-	}
-	if(glfwGetKey(window->frame, GLFW_KEY_TAB) == GLFW_PRESS
-	&& window->delay < glfwGetTime() - 0.25) {
-		window->delay = glfwGetTime();
-		glfwSetInputMode(window->frame, GLFW_CURSOR,
-		glfwGetInputMode(window->frame, GLFW_CURSOR) == GLFW_CURSOR_DISABLED?
-		GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
-	}
-
-	float moveSpeed = camera->moveSpeed * deltaTime;
-	float turnSpeed = camera->turnSpeed * deltaTime;
-	if(glfwGetKey(window->frame, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) moveSpeed *= 4;
-
-	if(glfwGetKey(window->frame, GLFW_KEY_W) == GLFW_PRESS) CameraMoveZ(camera, moveSpeed);
-	if(glfwGetKey(window->frame, GLFW_KEY_S) == GLFW_PRESS) CameraMoveZ(camera, -moveSpeed);
-	if(glfwGetKey(window->frame, GLFW_KEY_A) == GLFW_PRESS) CameraMoveX(camera, moveSpeed);
-	if(glfwGetKey(window->frame, GLFW_KEY_D) == GLFW_PRESS) CameraMoveX(camera, -moveSpeed);
-	if(glfwGetKey(window->frame, GLFW_KEY_E) == GLFW_PRESS) CameraMoveY(camera, moveSpeed);
-	if(glfwGetKey(window->frame, GLFW_KEY_Q) == GLFW_PRESS) CameraMoveY(camera, -moveSpeed);
-
-	if(glfwGetKey(window->frame, GLFW_KEY_RIGHT) == GLFW_PRESS) CameraYaw(camera, turnSpeed, window->frame);
-	if(glfwGetKey(window->frame, GLFW_KEY_LEFT) == GLFW_PRESS) CameraYaw(camera, -turnSpeed, window->frame);
-	if(glfwGetKey(window->frame, GLFW_KEY_UP) == GLFW_PRESS) CameraPitch(camera, turnSpeed, window->frame);
-	if(glfwGetKey(window->frame, GLFW_KEY_DOWN) == GLFW_PRESS) CameraPitch(camera, -turnSpeed, window->frame);
-	if(glfwGetKey(window->frame, GLFW_KEY_C) == GLFW_PRESS) CameraZoom(camera, 1);
-	if(glfwGetKey(window->frame, GLFW_KEY_Z) == GLFW_PRESS) CameraZoom(camera, -1);
-}
 
 
 void SetModelData(Model *model) {
@@ -394,66 +370,11 @@ void FreeMemory(Models *models, Textures *textures) {
 	}
 }
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-	glViewport(0, 0, width, height);
-} 
 
-void mouse_callback(GLFWwindow* window, double xPos, double yPos) {
-	Controls *controls = glfwGetWindowUserPointer(window);
-	if (controls->mouse->firstMouse) {
-		controls->mouse->lastX = xPos;
-		controls->mouse->lastY = yPos;
-
-		controls->mouse->firstMouse = false;
-	}
-
-	controls->mouse->xOffset = xPos - controls->mouse->lastX;
-	controls->mouse->yOffset = controls->mouse->lastY - yPos;
-	controls->mouse->xOffset *= controls->mouse->sensitivity;
-	controls->mouse->yOffset *= controls->mouse->sensitivity;
-
-	controls->mouse->lastX = xPos;
-	controls->mouse->lastY = yPos;
-	
-	CameraYaw(controls->camera, controls->mouse->xOffset, window);
-	CameraPitch(controls->camera, controls->mouse->yOffset, window);
-}
-
-void scroll_callback(GLFWwindow *window, double xOffset, double yOffset) {
-	Controls *controls = glfwGetWindowUserPointer(window);
-
-	CameraZoom(controls->camera, 2*yOffset);
-}
-
-int CreateWindow(Window *window, Controls *controls) {
-	printf("Window initializiation..\n");
-
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	window->frame = glfwCreateWindow(window->width, window->height, "C-term3D", NULL, NULL);
-	if (window->frame == NULL) {
-		printf("Window creation error\n");
-		return 1;
-	}
-
-	glfwSetWindowUserPointer(window->frame, (void*)controls);
-
-	glfwMakeContextCurrent(window->frame);
-	glfwSetFramebufferSizeCallback(window->frame, framebuffer_size_callback);  
-	glfwSetCursorPosCallback(window->frame, mouse_callback);  
-	glfwSetScrollCallback(window->frame, scroll_callback);
-
-	glfwSetInputMode(window->frame, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-		printf("GLAD error\n");
-		return 1;
-	}
-
-	return 0;
+void UpdateLight(Model *light) {
+	glm_vec3_copy(light->data.light.color, light->data.light.specular);
+	glm_vec3_mul(light->data.light.color, (vec3){0.8, 0.8, 0.8}, light->data.light.diffuse);
+	glm_vec3_mul(light->data.light.color, (vec3){0.2, 0.2, 0.2}, light->data.light.ambient);
 }
 
 void InitializeStructs(Window *window, Input *input, Textures *textures, Models *models, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls) {
@@ -509,16 +430,17 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	// MODEL 0
 	models->model[0].type = OBJ_MODEL;
 	models->model[1].type = OBJ_MODEL;
-	models->model[2].type = OBJ_LIGHT;
+	models->model[2].type = OBJ_LIGHT_POINT;
 
 	models->model[0].transformCount = 8;
 	models->model[1].transformCount = 2;
 	models->model[2].transformCount = 1;
 
-	models->model[0].data.material.texture = 1;
-	models->model[1].data.material.texture = 0;
+	models->model[0].data.material.texture = 0;
+	models->model[1].data.material.texture = 2;
 
-	models->model[0].data.material.shininess = 2;
+	models->model[0].data.material.shininess = 256;
+	models->model[1].data.material.shininess = 64;
 
 	for (int obj = 0; obj < models->count; obj++) {
 		models->model[obj].translate = malloc(sizeof(vec3) * models->model[obj].transformCount);
@@ -534,8 +456,6 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	glm_vec3_copy(cubeS, models->model[0].scale);
 
 	// MODEL 1
-	models->model[1].data.material.shininess = 128;
-
 	for (int tr = 0; tr < models->model[1].transformCount; tr++) {
 		glm_vec3_copy(floorT[tr], models->model[1].translate[tr]);
 
@@ -546,10 +466,7 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 
 	// MODEL 2
 	glm_vec3_copy((vec3){1.0, 1.0, 1.0}, models->model[2].data.light.color);
-
-	glm_vec3_copy(models->model[2].data.light.color, models->model[2].data.light.specular);
-	glm_vec3_mul(models->model[2].data.light.color, (vec3){0.8, 0.8, 0.8}, models->model[2].data.light.diffuse);
-	glm_vec3_mul(models->model[2].data.light.diffuse, (vec3){0.2, 0.2, 0.2}, models->model[2].data.light.ambient);
+	UpdateLight(&models->model[2]);
 
 	glm_vec3_copy(lightT, models->model[2].translate[0]);
 

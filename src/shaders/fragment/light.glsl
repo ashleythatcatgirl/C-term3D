@@ -6,10 +6,6 @@ in vec3 normalCords;
 in vec2 textureCords;
 
 struct Light {
-	vec3 ambient;
-	vec3 diffuse;
-	vec3 specular;
-
 	vec3 color;
 };
 

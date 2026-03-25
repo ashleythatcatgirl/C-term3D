@@ -30,7 +30,8 @@ const char SHADER_DIRECTORY[] = "../src/shaders/";
 
 typedef enum {
 	OBJ_MODEL,
-	OBJ_LIGHT
+	OBJ_LIGHT_POINT,
+	OBJ_LIGHT_DIRECTION
 } ObjectType;
 
 typedef struct Window {
@@ -144,20 +145,14 @@ typedef struct Controls {
 
 void InitializeStructs(Window *window, Input *input, Textures *textures, Models *models, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls);
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xPos, double yPos);
-void scroll_callback(GLFWwindow* window, double xOffset, double yOffset);
-
-int CreateWindow(Window *window, Controls *controls);
-
 void SetModelData(Model *model);
-
 
 int LoadTextures(Textures *textures);
 int LinkTextures(Textures *textures, unsigned int *shaderProgram);
 
+void UpdateLight(Model *light);
+
 int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Transforms *transforms, Camera *camera);
-void ProcessKeyInput(Window *window, Camera *camera, float deltaTime);
 
 void FreeMemory(Models *models, Textures *textures);
 

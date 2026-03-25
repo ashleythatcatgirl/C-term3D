@@ -1,7 +1,8 @@
 
-#include "main.h"
 #ifndef SHADER_H
 #define SHADER_H
+
+#include "main.h"
 
 char* GetShaderContent(const char* fileName);
 int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *fragShader);

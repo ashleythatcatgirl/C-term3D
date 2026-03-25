@@ -113,17 +113,19 @@ void UpdateShaderUniform(unsigned int *shader, Model *model, Model *light, Camer
 	glUseProgram(*shader);
 
 	if (model->type == OBJ_MODEL) {
-		ShaderSetUInt(&model->shader, "material.diffuse", &model->data.material.texture);
-		ShaderSetUInt(&model->shader, "material.specular", &model->data.material.texture);
+		int a = 0, b = 1;
+		ShaderSetInt(&model->shader, "material.diffuse", &a);
+		ShaderSetInt(&model->shader, "material.specular", &b);
 		ShaderSetFloat(&model->shader, "material.shininess", &model->data.material.shininess);
 
 		ShaderSetVec3(&model->shader, "light.ambient", &light->data.light.ambient);
 		ShaderSetVec3(&model->shader, "light.diffuse", &light->data.light.diffuse);
 		ShaderSetVec3(&model->shader, "light.specular", &light->data.light.specular);
 
-		ShaderSetVec3(&model->shader, "lightPos", &light->translate[0]);
+		ShaderSetVec3(&model->shader, "light.position", &light->translate[0]);
+
 		ShaderSetVec3(&model->shader, "camPos", &camera->position);
-	} else if (model->type == OBJ_LIGHT) {
+	} else if (model->type == OBJ_LIGHT_POINT) {
 		ShaderSetVec3(&model->shader, "light.color", &model->data.light.color);
 	}
 }

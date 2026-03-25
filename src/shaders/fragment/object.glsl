@@ -16,20 +16,21 @@ struct Light {
 	vec3 ambient;
 	vec3 diffuse;
 	vec3 specular;
+
+	vec3 position;
 };
 
 uniform Material material;
 uniform Light light;
 
 in vec3 fragPos;
-uniform vec3 lightPos;
 uniform vec3 camPos;
 
 void main() {
 	vec3 ambient = light.ambient * vec3(texture(material.diffuse, textureCords));
 
 	vec3 normalized = normalize(normalCords);
-	vec3 lightDir = normalize(lightPos - fragPos);
+	vec3 lightDir = normalize(light.position - fragPos);
 	float angleDif = max(dot(lightDir, normalized), 0.0);
 	vec3 diffuse = light.diffuse * vec3(texture(material.diffuse, textureCords)) * angleDif;
 
@@ -38,6 +39,5 @@ void main() {
 	float angleSpec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
 	vec3 specular = light.specular * vec3(texture(material.specular, textureCords)) * angleSpec;
 
-	vec3 light = ambient + diffuse + specular;
-	FragColor = vec4(light, 1.0);
+	FragColor = vec4(vec3(ambient + diffuse + specular), 1.0);
 }

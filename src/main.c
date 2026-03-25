@@ -391,7 +391,7 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	models->count = 3;
 	models->model = malloc(sizeof(Model) * models->count);
 
-	vec3 cubeT[8] = {
+	vec3 cubeT[10] = {
 		{-2.0, 1.0, 0.0},
 		{2.0, 1.0, -1.0},
 		{2.0, 1.0, 2.0},
@@ -399,9 +399,11 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 		{0.0, -1.5, 0.0},
 		{4.0, 0.0, 1.0},
 		{3.0, -1.0, -2.0},
-		{-1.0, 4.0, -3.0}
+		{-1.0, 4.0, -3.0},
+		{8.0, 2.0, -4.0},
+		{-7.0, 4.0, 1.0}
 	};
-	vec3 cubeR[8] = {
+	vec3 cubeR[10] = {
 		{-1.0, 1.0, 0.0},
 		{1.0, 1.0, -1.0},
 		{1.0, 1.0, 1.0},
@@ -409,6 +411,8 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 		{0.0, -1.0, 0.0},
 		{1.0, 0.0, 1.0},
 		{1.0, -1.0, -1.0},
+		{-1.0, 1.0, -1.0},
+		{-1.0, 1.0, -1.0},
 		{-1.0, 1.0, -1.0}
 	};
 	vec3 cubeS = {1.0, 1.0, 1.0};
@@ -432,14 +436,14 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	models->model[1].type = OBJ_MODEL;
 	models->model[2].type = OBJ_LIGHT_POINT;
 
-	models->model[0].transformCount = 8;
+	models->model[0].transformCount = 10;
 	models->model[1].transformCount = 2;
 	models->model[2].transformCount = 1;
 
 	models->model[0].data.material.texture = 0;
 	models->model[1].data.material.texture = 2;
 
-	models->model[0].data.material.shininess = 256;
+	models->model[0].data.material.shininess = 64;
 	models->model[1].data.material.shininess = 64;
 
 	for (int obj = 0; obj < models->count; obj++) {

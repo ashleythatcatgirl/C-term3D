@@ -4,6 +4,7 @@
 #include "include/cglm/vec3.h"
 #include "include/glad.c"
 
+#include "parseInput.h"
 #include "shader.c"
 #include "parseInput.c"
 #include "controls.c"
@@ -20,6 +21,7 @@
 int main(int argc, char **argv) {
 	struct Window window;
 	struct Input input;
+	struct Regex regex;
 
 	struct Textures textures;
 	struct Models models;
@@ -72,10 +74,11 @@ int main(int argc, char **argv) {
 	printf("Loading successful, press enter to continue..");
 	getchar();
 
-	RenderLoop(&window, &input, &models, &textures, &transforms, &camera);
+	RenderLoop(&window, &input, &regex, &models, &textures, &transforms, &camera);
 
 exitProgram:
 	FreeMemory(&models, &textures);
+	FreeRegexPatterns(&regex);
 
 	glfwDestroyWindow(window.frame);
 	glfwTerminate();
@@ -83,7 +86,7 @@ exitProgram:
 	return 0;
 }
 
-int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Transforms *transforms, Camera *camera) {
+int RenderLoop(Window *window, Input *input, Regex *regex, Models *models, Textures *textures, Transforms *transforms, Camera *camera) {
 	printf("Opened window, press ESC to exit\n");
 	printf("View available commands with 'help'\n");
 	glEnable(GL_DEPTH_TEST);
@@ -91,6 +94,7 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	SetNonBlocking();
+	CreateRegexPatterns(regex);
 	
 	vec3 skyColor = {0.5, 0.5, 0.6};
 
@@ -98,7 +102,7 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 	float lastFrame = 0.0;
 	float currentFrame = 0.0;
 	while(!glfwWindowShouldClose(window->frame)) {	
-		ParseInput(input, models, textures);
+		ParseInput(input, regex, models, textures);
 
 		currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
@@ -275,7 +279,6 @@ int LoadTextures(Textures *textures) {
 					texture->specular = temp;
 
 				}
-				texture->specular = malloc(sizeof(Tex));
 				strcpy(texture->specular[0].name, textureName);
 				strcat(texture->specular[0].name, de2->d_name);
 			}
@@ -285,6 +288,13 @@ int LoadTextures(Textures *textures) {
 		closedir(dr2);
 
 		if (a == 0) continue;
+		if (texture->diffuse == NULL) {
+			printf("No diffuse map found\n");
+			return -1;
+		}
+		if (texture->specular == NULL) {
+			printf("No specular map found\n");
+		}
 
 		textures->count++;
 	}
@@ -299,27 +309,25 @@ int LoadTextures(Textures *textures) {
 	printf("\n->Setting texture data..\n");
 	for (int i = 0; i < textures->count; i++) {
 		texture = &textures->texture[i];
-		if (texture->diffuse != NULL) {
-			printf("  ->Texture[%d] dif\n", i);
-			glGenTextures(1, &texture->diffuse[0].memory);
-			glBindTexture(GL_TEXTURE_2D, texture->diffuse[0].memory);
+		printf("  ->Texture[%d] diffuse\n", i);
+		glGenTextures(1, &texture->diffuse[0].memory);
+		glBindTexture(GL_TEXTURE_2D, texture->diffuse[0].memory);
 
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-			data = stbi_load(texture->diffuse[0].name, &textureWidth, &textureHeight, &colorChannels, 4);
-			if (!data) return -1;
+		data = stbi_load(texture->diffuse[0].name, &textureWidth, &textureHeight, &colorChannels, 4);
+		if (!data) return -1;
 
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,  GL_RGBA, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,  GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
 
-			stbi_image_free(data);
-		}
+		stbi_image_free(data);
 
 		if (texture->specular != NULL) {
-			printf("  ->Texture[%d] spec\n", i);
+			printf("  ->Texture[%d] specular\n", i);
 			glGenTextures(1, &texture->specular[0].memory);
 			glBindTexture(GL_TEXTURE_2D, texture->specular[0].memory);
 
@@ -335,6 +343,7 @@ int LoadTextures(Textures *textures) {
 			glGenerateMipmap(GL_TEXTURE_2D);
 
 			stbi_image_free(data);
+		} else {
 		}
 	}
 
@@ -354,8 +363,10 @@ int LinkTextures(Textures *textures, unsigned int *shaderProgram) {
 void FreeMemory(Models *models, Textures *textures) {
 	if (models->model != NULL) {
 		for (int obj = 0; obj < models->count; obj++) {
-			if (models->model[obj].translate != NULL) free(models->model[obj].translate);
-			if (models->model[obj].rotate != NULL) free(models->model[obj].rotate);
+			if (models->model[obj].translate != NULL)
+				free(models->model[obj].translate);
+			if (models->model[obj].rotate != NULL)
+				free(models->model[obj].rotate);
 
  	   		glDeleteBuffers(1, &models->model[obj].VBO);
 			glDeleteVertexArrays(1, &models->model[obj].VAO);
@@ -366,6 +377,14 @@ void FreeMemory(Models *models, Textures *textures) {
 		free(models->model);
 	}
 	if (textures->texture != NULL) {
+		for (int tex = 0; tex < textures->count; tex++) {
+			if (textures->texture[tex].diffuse != NULL)
+				free(textures->texture[tex].diffuse);
+			if (textures->texture[tex].specular != NULL)
+				free(textures->texture[tex].specular);
+			
+		}
+
 		free(textures->texture);
 	}
 }
@@ -478,6 +497,9 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	glm_vec3_normalize(models->model[2].rotate[0]);
 
 	glm_vec3_copy(lightS, models->model[2].scale);
+
+	models->model[2].data.light.attLinear = 0.027;
+	models->model[2].data.light.attQuadratic = 0.0028;
 
 	glm_vec3_copy((vec3){0.0, 0.0, 3.0}, camera->position);
 	glm_vec3_copy((vec3){0.0, 0.0, -1.0}, camera->front);

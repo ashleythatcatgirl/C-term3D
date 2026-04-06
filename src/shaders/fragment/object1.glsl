@@ -24,26 +24,41 @@ struct Light {
 };
 
 uniform Material material;
-uniform Light light;
 
 in vec3 fragPos;
 uniform vec3 camPos;
 
-void main() {
+#define POINT_LIGHTS 1
+
+uniform Light light[POINT_LIGHTS];
+
+vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 fragPos) {
 	float distance = length(light.position - fragPos);
 	float attenuation = 1.0 / (1.0 + light.attLinear * distance + light.attQuadratic * pow(distance, 2));
 
-	vec3 ambient = attenuation * light.ambient * vec3(texture(material.diffuse, textureCords));
-
-	vec3 normalized = normalize(normalCords);
 	vec3 lightDir = normalize(light.position - fragPos);
-	float angleDif = max(dot(lightDir, normalized), 0.0);
-	vec3 diffuse = attenuation * light.diffuse * vec3(texture(material.diffuse, textureCords)) * angleDif;
-
-	vec3 viewDir = normalize(camPos - fragPos);
 	vec3 reflectDir = reflect(-lightDir, normalized);
+
+	float angleDif = max(dot(lightDir, normal), 0.0);
 	float angleSpec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+
+	vec3 ambient = attenuation * light.ambient * vec3(texture(material.diffuse, textureCords));
+	vec3 diffuse = attenuation * light.diffuse * vec3(texture(material.diffuse, textureCords)) * angleDif;
 	vec3 specular = attenuation * light.specular * vec3(texture(material.specular, textureCords)) * angleSpec;
 
-	FragColor = vec4(vec3(ambient + diffuse + specular), 1.0);
+	return (ambient + diffuse + specular);
 }
+
+void main() {
+	vec3 normal = normalize(normalCords);
+	vec3 viewDir = normalize(camPos - fragPos);
+
+	vec3 result = 0;
+
+	for (int pL = 0; pL < POINT_LIGHTS; pL++) {
+		result += CalculatePointLight(light[pL], normal, viewDir, fragPos);
+	}
+	
+	FragColor = vec4(result, 1.0);
+}
+

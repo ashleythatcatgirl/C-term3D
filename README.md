@@ -27,33 +27,37 @@ Loader generator - [GLAD](https://glad.dav1d.de/)
 
 ## List of current features
 
-# Rendering
+### Rendering
 - 3D viewport
-- Semi-loadable textures
+- Loadable extures
 - Semi-loadable shaders
 - Multiple objects
-- Basic lighting
+#### Lighting
+- Diffuse and specular maps
+- Point lights
+- Attenuation
 
-# Modeling
+### Modeling
 - none really ;w;
 
-# Other
+### Other
 - Transforms
 - Camera controls (keyboard and mouse)
+- Basic commands
 
 ## List of (Hopefully) future features
 
-# Rendering
+### Rendering
 - Better lighting
-- Materials
 - Shadows
 - Post processing effects
+- Better materials (normal maps, etc.)
 
-# Modeling
+### Modeling
 - Selecting models
 - Editing individual verticies
 
-# Other
+### Other
 - Importing/exporting models
 - Exportable scenes
 - Ability to render scenes to img files

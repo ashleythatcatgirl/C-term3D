@@ -41,6 +41,11 @@ typedef struct Window {
 	GLFWwindow *frame;
 } Window;
 
+typedef struct Regex {
+	unsigned int count;
+	regex_t *patterns;
+} Regex;
+
 typedef struct Input {
 	char buffer[128];
 	int length;
@@ -59,6 +64,9 @@ typedef struct Light {
 	vec3 specular;
 
 	vec3 color;
+
+	float attLinear;
+	float attQuadratic;
 } Light;
 
 typedef struct Model {
@@ -152,7 +160,7 @@ int LinkTextures(Textures *textures, unsigned int *shaderProgram);
 
 void UpdateLight(Model *light);
 
-int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Transforms *transforms, Camera *camera);
+int RenderLoop(Window *window, Input *input, Regex *regex, Models *models, Textures *textures, Transforms *transforms, Camera *camera);
 
 void FreeMemory(Models *models, Textures *textures);
 

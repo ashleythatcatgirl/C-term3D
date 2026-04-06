@@ -2,34 +2,50 @@
 #include "shader.h"
 #include "main.h"
 #include <stdbool.h>
+#include <stdio.h>
 
 int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *fragShader) {
 	printf("Compiling shader..\n");
+	int success;
+	char infoLog[512];
+
 	const char *vertexShaderSource = GetShaderContent(vertShader);
-	if (vertexShaderSource == 0) return -1;
+	if (vertexShaderSource == 0) {
+		return -1;
+	}
+	const char *fragmentShaderSource = GetShaderContent(fragShader);
+	if (fragmentShaderSource == 0) {
+		return -1;
+	}
 
 	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
 	glCompileShader(vertexShader);
 
-	int success;
-	char infoLog[512];
-
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-	if (!success) {
-        	glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-	       	printf("Vertex shader fail%s", infoLog);
-    	}
-
-	const char *fragmentShaderSource = GetShaderContent(fragShader);
-	if (fragmentShaderSource == 0) return -1;
-
 	unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
 	glCompileShader(fragmentShader);
 
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+	if (!success) {
+		free((char*)vertexShaderSource);
+		free((char*)fragmentShaderSource);
+
+		glDeleteShader(vertexShader);
+		glDeleteShader(fragmentShader);
+
+        	glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+	       	printf("Vertex shader fail%s", infoLog);
+    	}
+
 	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
 	if (!success) {
+		free((char*)vertexShaderSource);
+		free((char*)fragmentShaderSource);
+
+		glDeleteShader(vertexShader);
+		glDeleteShader(fragmentShader);
+
         	glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
         	printf("Fragment shader fail%s", infoLog);
     	}
@@ -41,15 +57,21 @@ int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *
 
 	glGetProgramiv(*shaderProgram, GL_LINK_STATUS, &success);
     	if (!success) {
+		free((char*)vertexShaderSource);
+		free((char*)fragmentShaderSource);
+
+		glDeleteShader(vertexShader);
+		glDeleteShader(fragmentShader);
+
         	glGetProgramInfoLog(*shaderProgram, 512, NULL, infoLog);
         	printf("Shader to program linking fail\n %s", infoLog);
     	}
 
-	glDeleteShader(vertexShader);
-	glDeleteShader(fragmentShader);
-
 	free((char*)vertexShaderSource);
 	free((char*)fragmentShaderSource);
+
+	glDeleteShader(vertexShader);
+	glDeleteShader(fragmentShader);
 	
 	return 0;
 }
@@ -63,7 +85,10 @@ char* GetShaderContent(const char* fileName) {
 	if (content == NULL) return 0;
 
 	FILE *fPtr = fopen(fileName, "r");
-	if (fPtr == NULL) return 0;
+	if (fPtr == NULL) {
+		free(content);
+		return 0;
+	}
 
 	int i = 0;
 	for (; (buffer = fgetc(fPtr)) != EOF; i++) {
@@ -71,7 +96,11 @@ char* GetShaderContent(const char* fileName) {
 			size *= 2;
 
 			char* temp = realloc(content, sizeof(char) * size);
-			if (temp == NULL) return 0;
+			if (temp == NULL) {
+				free(content);
+				fclose(fPtr);
+				return 0;
+			}
 
 			content = temp;
 		}
@@ -80,6 +109,8 @@ char* GetShaderContent(const char* fileName) {
 	}
 
 	content[i] = '\0';
+
+	fclose(fPtr);
 	
 	return content;
 }
@@ -123,6 +154,9 @@ void UpdateShaderUniform(unsigned int *shader, Model *model, Model *light, Camer
 		ShaderSetVec3(&model->shader, "light.specular", &light->data.light.specular);
 
 		ShaderSetVec3(&model->shader, "light.position", &light->translate[0]);
+
+		ShaderSetFloat(&model->shader, "light.attLinear", &light->data.light.attLinear);
+		ShaderSetFloat(&model->shader, "light.attQuadratic", &light->data.light.attQuadratic);
 
 		ShaderSetVec3(&model->shader, "camPos", &camera->position);
 	} else if (model->type == OBJ_LIGHT_POINT) {

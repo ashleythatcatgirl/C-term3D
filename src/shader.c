@@ -5,18 +5,14 @@
 #include <stdio.h>
 
 int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *fragShader) {
-	printf("Compiling shader..\n");
 	int success;
 	char infoLog[512];
 
 	const char *vertexShaderSource = GetShaderContent(vertShader);
-	if (vertexShaderSource == 0) {
-		return -1;
-	}
+	if (!vertexShaderSource) return -1;
+
 	const char *fragmentShaderSource = GetShaderContent(fragShader);
-	if (fragmentShaderSource == 0) {
-		return -1;
-	}
+	if (!fragmentShaderSource) return -1;
 
 	unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
@@ -67,6 +63,8 @@ int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *
 
         	glGetProgramInfoLog(*shaderProgram, 512, NULL, infoLog);
         	printf("Shader to program linking fail\n %s", infoLog);
+
+		return -1;
     	}
 
 	free((char*)vertexShaderSource);
@@ -151,19 +149,26 @@ void UpdateShaderUniform(unsigned int *shader, Models *models, Model *model, Cam
 		ShaderSetInt(&model->shader, "material.specular", &b);
 		ShaderSetFloat(&model->shader, "material.shininess", &model->data.material.shininess);
 
-		ShaderSetVec3(&model->shader, "light[0].position", &models->model[2].translate[0]);
-		ShaderSetVec3(&model->shader, "light[0].ambient", &models->model[2].data.light.ambient);
-		ShaderSetVec3(&model->shader, "light[0].diffuse", &models->model[2].data.light.diffuse);
-		ShaderSetVec3(&model->shader, "light[0].specular", &models->model[2].data.light.specular);
-		ShaderSetFloat(&model->shader, "light[0].attLinear", &models->model[2].data.light.attLinear);
-		ShaderSetFloat(&model->shader, "light[0].attQuadratic", &models->model[2].data.light.attQuadratic);
+		ShaderSetVec3(&model->shader, "light[0].position", &models->model[12].translate);
+		ShaderSetVec3(&model->shader, "light[0].ambient", &models->model[12].data.light.ambient);
+		ShaderSetVec3(&model->shader, "light[0].diffuse", &models->model[12].data.light.diffuse);
+		ShaderSetVec3(&model->shader, "light[0].specular", &models->model[12].data.light.specular);
+		ShaderSetFloat(&model->shader, "light[0].attLinear", &models->model[12].data.light.attLinear);
+		ShaderSetFloat(&model->shader, "light[0].attQuadratic", &models->model[12].data.light.attQuadratic);
 
-		ShaderSetVec3(&model->shader, "light[1].position", &models->model[3].translate[0]);
-		ShaderSetVec3(&model->shader, "light[1].ambient", &models->model[3].data.light.ambient);
-		ShaderSetVec3(&model->shader, "light[1].diffuse", &models->model[3].data.light.diffuse);
-		ShaderSetVec3(&model->shader, "light[1].specular", &models->model[3].data.light.specular);
-		ShaderSetFloat(&model->shader, "light[1].attLinear", &models->model[3].data.light.attLinear);
-		ShaderSetFloat(&model->shader, "light[1].attQuadratic", &models->model[3].data.light.attQuadratic);
+		ShaderSetVec3(&model->shader, "light[1].position", &models->model[13].translate);
+		ShaderSetVec3(&model->shader, "light[1].ambient", &models->model[13].data.light.ambient);
+		ShaderSetVec3(&model->shader, "light[1].diffuse", &models->model[13].data.light.diffuse);
+		ShaderSetVec3(&model->shader, "light[1].specular", &models->model[13].data.light.specular);
+		ShaderSetFloat(&model->shader, "light[1].attLinear", &models->model[13].data.light.attLinear);
+		ShaderSetFloat(&model->shader, "light[1].attQuadratic", &models->model[13].data.light.attQuadratic);
+
+		ShaderSetVec3(&model->shader, "light[2].position", &models->model[14].translate);
+		ShaderSetVec3(&model->shader, "light[2].ambient", &models->model[14].data.light.ambient);
+		ShaderSetVec3(&model->shader, "light[2].diffuse", &models->model[14].data.light.diffuse);
+		ShaderSetVec3(&model->shader, "light[2].specular", &models->model[14].data.light.specular);
+		ShaderSetFloat(&model->shader, "light[2].attLinear", &models->model[14].data.light.attLinear);
+		ShaderSetFloat(&model->shader, "light[2].attQuadratic", &models->model[14].data.light.attQuadratic);
 
 		ShaderSetVec3(&model->shader, "camPos", &camera->position);
 	} else if (model->type == OBJ_LIGHT_POINT) {

@@ -12,13 +12,11 @@
 
 #include <stdio.h>
 #include <stdbool.h>
-#include <math.h>
-#include <string.h>
-#include <dirent.h>
-
 #include <unistd.h>
+#include <string.h>
+#include <math.h>
+#include <dirent.h>
 #include <fcntl.h>
-
 #include <regex.h>
 
 const unsigned int INIT_WIDTH = 960;
@@ -57,7 +55,6 @@ typedef struct Material {
 
 	float shininess;
 } Material;
-
 typedef struct Light {
 	vec3 ambient;
 	vec3 diffuse;
@@ -68,15 +65,15 @@ typedef struct Light {
 	float attLinear;
 	float attQuadratic;
 } Light;
+
 typedef struct Model {
 	unsigned int VBO;
 	unsigned int VAO;
 
 	unsigned int shader;
 
-	unsigned int transformCount;
-	vec3 *translate;
-	vec3 *rotate;
+	vec3 translate;
+	vec3 rotate;
 	vec3 scale;
 
 	ObjectType type;
@@ -136,7 +133,7 @@ typedef struct Controls {
 } Controls;
 
 
-void InitializeStructs(Window *window, Input *input, Textures *textures, Models *models, Camera* camera, Mouse *mouse, Controls *controls);
+void InitializeStructs(Window *window, Input *input, Models *models, Textures *textures, Camera* camera, Mouse *mouse, Controls *controls);
 
 void SetModelData(Model *model);
 
@@ -144,7 +141,7 @@ int LoadTextures(Textures *textures);
 
 void UpdateLight(Model *light);
 
-int RenderLoop(Window *window, Input *input, Regex *regex, Models *models, Textures *textures, Camera *camera);
+int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Camera *camera);
 
 void FreeMemory(Models *models, Textures *textures);
 

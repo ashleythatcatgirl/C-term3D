@@ -5,7 +5,7 @@ in vec3 verticiesCords;
 in vec3 normalCords;
 in vec2 textureCords;
 
-#define LIGHTS 2
+#define LIGHTS 3
 
 struct Material {
 	sampler2D diffuse;

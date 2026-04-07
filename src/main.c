@@ -1,5 +1,10 @@
 
+
 #include "main.h"
+
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include "include/cglm/vec3.h"
 #include "include/glad.c"
@@ -12,15 +17,10 @@
 #include "verticies.c"
 
 #include <GLFW/glfw3.h>
-#include <dirent.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-int main(int argc, char **argv) {
+int main() {
 	struct Window window;
 	struct Input input;
-	struct Regex regex;
 
 	struct Textures textures;
 	struct Models models;
@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
 	struct Mouse mouse;
 	struct Controls controls;
 	
-	InitializeStructs(&window, &input, &textures, &models, &camera, &mouse, &controls);
+	InitializeStructs(&window, &input, &models, &textures, &camera, &mouse, &controls);
 
 	switch(CreateWindow(&window, &controls)) {
 	case 0:
@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
 		goto exitProgram;
 	}
 
-	printf("Initializing object vertex data..\n");
+	printf("Compiling shaders..\n");
 	for (int obj = 0; obj < models.count; obj++) {
 		Model *model = &models.model[obj];
 		if (model->type == OBJ_MODEL)
@@ -64,19 +64,13 @@ int main(int argc, char **argv) {
 		goto exitProgram;
 	}
 
-	/*for (int i = 0; i < 2; i++) {
-		printf("Model %d textures\n", i);
-		LinkTextures(&textures, &models.model[i].shader);
-	}*/
-
 	printf("Loading successful, press enter to continue..");
 	getchar();
 
-	RenderLoop(&window, &input, &regex, &models, &textures, &camera);
+	RenderLoop(&window, &input, &models, &textures, &camera);
 
 exitProgram:
 	FreeMemory(&models, &textures);
-	FreeRegexPatterns(&regex);
 
 	glfwDestroyWindow(window.frame);
 	glfwTerminate();
@@ -84,15 +78,17 @@ exitProgram:
 	return 0;
 }
 
-int RenderLoop(Window *window, Input *input, Regex *regex, Models *models, Textures *textures, Camera *camera) {
+int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Camera *camera) {
 	printf("Opened window, press ESC to exit\n");
 	printf("View available commands with 'help'\n");
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	struct Regex regex;
+
 	SetNonBlocking();
-	CreateRegexPatterns(regex);
+	CreateRegexPatterns(&regex);
 	
 	mat4 modelTransform, viewTransform, projectionTransform;
 
@@ -101,7 +97,7 @@ int RenderLoop(Window *window, Input *input, Regex *regex, Models *models, Textu
 	float deltaTime = 0.0;
 	float currentFrame = 0.0, lastFrame = 0.0;
 	while(!glfwWindowShouldClose(window->frame)) {	
-		ParseInput(input, regex, models, textures);
+		ParseInput(input, &regex, models, textures);
 
 		currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
@@ -119,9 +115,6 @@ int RenderLoop(Window *window, Input *input, Regex *regex, Models *models, Textu
 
 		glm_mat4_identity(projectionTransform);
 		glm_perspective(glm_rad(camera->zoom), (float)window->width/(float)window->height, 0.1, 100.0, projectionTransform);
-
-		//glm_vec3_copy((vec3){fabs(sin(glfwGetTime())), fabs(sin(2 * glfwGetTime())), fabs(sin(3 * glfwGetTime()))}, models->model[2].data.light.color);
-		//UpdateLight(&models->model[2]);
 
 		for (int obj = 0; obj < models->count; obj++) {
 			Model *model = &models->model[obj];
@@ -143,22 +136,20 @@ int RenderLoop(Window *window, Input *input, Regex *regex, Models *models, Textu
 			ShaderSetMat4(&model->shader, "projection", GL_FALSE, (float*) projectionTransform);
 
 			glBindVertexArray(model->VAO);
-			for (int tr = 0; tr < model->transformCount; tr++) {
-				glm_mat4_identity(modelTransform);
-				glm_translate(modelTransform, model->translate[tr]);
-				for (int i = 0; i < 3; i++) {
-					if (model->rotate[tr][i] == 0) continue;
+			glm_mat4_identity(modelTransform);
+			glm_translate(modelTransform, model->translate);
+			for (int i = 0; i < 3; i++) {
+				if (model->rotate[i] == 0) continue;
 
-					glm_rotate(modelTransform, obj == 0 ? glfwGetTime() : 1.57, model->rotate[tr]);
-					break;
-				}
-				glm_scale(modelTransform, model->scale);
-				ShaderSetMat4(&model->shader, "model", GL_FALSE, (float*) modelTransform);
-
-				UpdateShaderUniform(&model->shader, models, model, camera);
-
-				glDrawArrays(GL_TRIANGLES, 0, 36);
+				glm_rotate(modelTransform, obj < 10 ? glfwGetTime() : 1.57, model->rotate);
+				break;
 			}
+			glm_scale(modelTransform, model->scale);
+			ShaderSetMat4(&model->shader, "model", GL_FALSE, (float*) modelTransform);
+
+			UpdateShaderUniform(&model->shader, models, model, camera);
+
+			glDrawArrays(GL_TRIANGLES, 0, 36);
 		}
 	
 		glfwSwapBuffers(window->frame);
@@ -167,6 +158,8 @@ int RenderLoop(Window *window, Input *input, Regex *regex, Models *models, Textu
 
 	printf("Closed window\n");
 	printf("Exiting program...\n");
+
+	FreeRegexPatterns(&regex);
 
 	return 0;
 }
@@ -349,11 +342,6 @@ int LoadTextures(Textures *textures) {
 void FreeMemory(Models *models, Textures *textures) {
 	if (models->model != NULL) {
 		for (int obj = 0; obj < models->count; obj++) {
-			if (models->model[obj].translate != NULL)
-				free(models->model[obj].translate);
-			if (models->model[obj].rotate != NULL)
-				free(models->model[obj].rotate);
-
  	   		glDeleteBuffers(1, &models->model[obj].VBO);
 			glDeleteVertexArrays(1, &models->model[obj].VAO);
 
@@ -382,7 +370,7 @@ void UpdateLight(Model *light) {
 	glm_vec3_mul(light->data.light.color, (vec3){0.1, 0.1, 0.1}, light->data.light.ambient);
 }
 
-void InitializeStructs(Window *window, Input *input, Textures *textures, Models *models, Camera* camera, Mouse *mouse, Controls *controls) {
+void InitializeStructs(Window *window, Input *input, Models *models, Textures *textures, Camera* camera, Mouse *mouse, Controls *controls) {
 	window->delay = glfwGetTime();
 	window->width = INIT_WIDTH;
 	window->height = INIT_HEIGHT;
@@ -393,7 +381,7 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	textures->count = 0;
 	textures->texture = NULL;
 
-	models->count = 4;
+	models->count = 15;
 	models->model = malloc(sizeof(Model) * models->count);
 
 	vec3 cubeT[10] = {
@@ -432,75 +420,54 @@ void InitializeStructs(Window *window, Input *input, Textures *textures, Models 
 	};
 	vec3 floorS = {20.0, 0.2, 20.0};
 
-	vec3 lightT = {-3.5, 5.0, 2.0};
+	vec3 lightT[3] = {
+		{-3.5, 5.0, 2.0},
+		{1.0, 3.0, -4.0},
+		{6.0, 2.0, -1.0}
+	};
 	vec3 lightR = {0.0, 0.0, 1.0};
 	vec3 lightS = {0.5, 0.5, 0.5};
-	vec3 light2T = {6.0, 2.0, -1.0};
-	vec3 light2R = {0.0, 0.0, 1.0};
-	vec3 light2S = {0.5, 0.5, 0.5};
 
-	models->model[0].type = OBJ_MODEL;
-	models->model[1].type = OBJ_MODEL;
-	models->model[2].type = OBJ_LIGHT_POINT;
-	models->model[3].type = OBJ_LIGHT_POINT;
+	vec3 lightColor[3] = {
+		{0.9, 0.5, 1.0},
+		{1.0, 0.9, 0.5},
+		{0.5, 1.0, 0.9}
+	};
 
-	models->model[0].transformCount = 10;
-	models->model[1].transformCount = 2;
-	models->model[2].transformCount = 1;
-	models->model[3].transformCount = 1;
+	for (int o = 0; o < 10; o++) {
+		models->model[o].type = OBJ_MODEL;
+		models->model[o].data.material.texture = 0;
+		models->model[o].data.material.shininess = 64;
 
-	models->model[0].data.material.texture = 0;
-	models->model[1].data.material.texture = 2;
+		glm_vec3_copy(cubeT[o], models->model[o].translate);
+		glm_vec3_copy(cubeR[o], models->model[o].rotate);
+		glm_vec3_normalize(models->model[o].rotate);
+		glm_vec3_copy(cubeS, models->model[o].scale);
+	}
+	for (int o = 10; o < 12; o++) {
+		models->model[o].type = OBJ_MODEL;
+		models->model[o].data.material.texture = 2;
+		models->model[o].data.material.shininess = 64;
 
-	models->model[0].data.material.shininess = 64;
-	models->model[1].data.material.shininess = 64;
+		glm_vec3_copy(floorT[o - 10], models->model[o].translate);
+		glm_vec3_copy(floorR[o - 10], models->model[o].rotate);
+		glm_vec3_normalize(models->model[o].rotate);
+		glm_vec3_copy(floorS, models->model[o].scale);
+	}
+	for (int o = 12; o < 15; o++) {
+		models->model[o].type = OBJ_LIGHT_POINT;
 
-	for (int obj = 0; obj < models->count; obj++) {
-		models->model[obj].translate = malloc(sizeof(vec3) * models->model[obj].transformCount);
-		models->model[obj].rotate = malloc(sizeof(vec3) * models->model[obj].transformCount);
+		glm_vec3_copy(lightT[o - 12], models->model[o].translate);
+		glm_vec3_copy(lightR, models->model[o].rotate);
+		glm_vec3_normalize(models->model[o].rotate);
+		glm_vec3_copy(lightS, models->model[o].scale);
+
+		glm_vec3_copy(lightColor[o - 12], models->model[o].data.light.color);
+		UpdateLight(&models->model[o]);
+		models->model[o].data.light.attLinear = 0.001;
+		models->model[o].data.light.attQuadratic = 0.01;
 	}
 
-	// MODEL 0
-	for (int tr = 0; tr < models->model[0].transformCount; tr++) {
-		glm_vec3_copy(cubeT[tr], models->model[0].translate[tr]);
-
-		glm_vec3_copy(cubeR[tr], models->model[0].rotate[tr]);
-		glm_vec3_normalize(models->model[0].rotate[tr]);
-	}
-	glm_vec3_copy(cubeS, models->model[0].scale);
-
-	// MODEL 1
-	for (int tr = 0; tr < models->model[1].transformCount; tr++) {
-		glm_vec3_copy(floorT[tr], models->model[1].translate[tr]);
-
-		glm_vec3_copy(floorR[tr], models->model[1].rotate[tr]);
-		glm_vec3_normalize(models->model[1].rotate[tr]);
-	}
-	glm_vec3_copy(floorS, models->model[1].scale);
-
-	// MODEL 2
-	glm_vec3_copy((vec3){0.9, 0.8, 1.0}, models->model[2].data.light.color);
-	UpdateLight(&models->model[2]);
-
-	glm_vec3_copy(lightT, models->model[2].translate[0]);
-	glm_vec3_copy(lightR, models->model[2].rotate[0]);
-	glm_vec3_normalize(models->model[2].rotate[0]);
-	glm_vec3_copy(lightS, models->model[2].scale);
-
-	models->model[2].data.light.attLinear = 0.027;
-	models->model[2].data.light.attQuadratic = 0.0028;
-
-	// MODEL 3
-	glm_vec3_copy((vec3){1.0, 0.9, 0.8}, models->model[3].data.light.color);
-	UpdateLight(&models->model[3]);
-
-	glm_vec3_copy(light2T, models->model[3].translate[0]);
-	glm_vec3_copy(light2R, models->model[3].rotate[0]);
-	glm_vec3_normalize(models->model[3].rotate[0]);
-	glm_vec3_copy(light2S, models->model[3].scale);
-
-	models->model[3].data.light.attLinear = 0.027;
-	models->model[3].data.light.attQuadratic = 0.0028;
 
 	glm_vec3_copy((vec3){0.0, 0.0, 3.0}, camera->position);
 	glm_vec3_copy((vec3){0.0, 0.0, -1.0}, camera->front);

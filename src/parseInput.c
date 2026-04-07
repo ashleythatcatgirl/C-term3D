@@ -7,7 +7,7 @@
 
 int CreateRegexPatterns(Regex *regex) {
 	const char* texture = "texture [0-9][0-9]* [0-9][0-9]";
-	const char* translate = "translate [0-9][0-9]* [0-9][0-9]* [xyz] [+-][0-9][0-9]*";
+	const char* translate = "translate [0-9][0-9]* [xyz] [+-][0-9][0-9]*";
 	const char* lightFalloff = "lightFalloff [0-9][0-9]* [0-9]\\.[0-9]* [0-9]\\.[0-9]*";
 	const char* patterns[3] = {
 		texture, translate, lightFalloff
@@ -26,10 +26,11 @@ int CreateRegexPatterns(Regex *regex) {
 }
 
 void FreeRegexPatterns(Regex *regex) {
+	if (regex->patterns != NULL) return;
 	for (int r = 0; r < regex->count; r++) {
 		if (regex->patterns[r].__allocated) regfree(&regex->patterns[r]);
 	}
-	if (regex->patterns != NULL) free(regex->patterns);
+	free(regex->patterns);
 }
 
 void SetNonBlocking() {
@@ -64,9 +65,10 @@ void ShowHelp() {
 	printf("== C-term3D ==\n");
 	printf("\n");
 
-	printf(" wireframe \n toggle wireframe\n\n");
-	printf(" texture 'm' 't' \n change texture of model 'm' to 't'\n\n");
-	printf(" translate 'm' 't' 'a' 'p' \n translate model 'm' of transform 't' on axis 'a' to position 'p'\n\n");
+	printf(" wireframe\n toggle wireframe\n\n");
+	printf(" texture 'm' 't'\n change texture of model 'm' to 't'\n\n");
+	printf(" translate 'm' 'a' 'p'\n translate model 'm' on axis 'a' to position 'p'\n\n");
+	printf(" lightFalloff 'l' 'i' 'q'\n change the attenuation of light 'l' to (linear) 'i' (quadratic) 'q'\n\n");
 }
 
 void ToggleWireframe(Input *input) {
@@ -91,24 +93,16 @@ void SetTexture(Input *input, Models *models, unsigned int *textureCount) {
 }
 
 void SetTranslate(Input *input, Models *models) {
-	int obj, tr;
+	int obj;
 	float pos;
 	char axis;
-	sscanf(input->buffer, "translate %d %d %c %f\n", &obj, &tr, &axis, &pos);
+	sscanf(input->buffer, "translate %d %c %f\n", &obj, &axis, &pos);
 	if (obj >= models->count) return;
-	if (tr >= models->model[obj].transformCount) return;
 	Model *model = &models->model[obj];
-	switch (axis) {
-	case 'x':
-		model->translate[tr][0] = pos;
-		break;
-	case 'y':
-		model->translate[tr][1] = pos;
-		break;
-	case 'z':
-		model->translate[tr][2] = pos;
-		break;
-	}
+
+	// x is 120th in ascii, followed by y and z
+	// perfect for this lol
+	model->translate[axis - 120] = pos;
 }
 
 void SetLightFalloff(Input *input, Models *models) {

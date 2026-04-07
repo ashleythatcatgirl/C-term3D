@@ -35,7 +35,8 @@ int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *
 		glDeleteShader(fragmentShader);
 
         	glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-	       	printf("Vertex shader fail%s", infoLog);
+	       	printf("Vertex shader fail%s\n", infoLog);
+		return -1;
     	}
 
 	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
@@ -47,7 +48,8 @@ int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *
 		glDeleteShader(fragmentShader);
 
         	glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        	printf("Fragment shader fail%s", infoLog);
+        	printf("Fragment shader fail%s\n", infoLog);
+		return -1;
     	}
 
 	*shaderProgram = glCreateProgram();
@@ -140,7 +142,7 @@ void ShaderSetMat4(unsigned int *shader, const char *name, int gl_bool, float *d
 	glUniformMatrix4fv(location, 1, gl_bool, data);
 }
 
-void UpdateShaderUniform(unsigned int *shader, Model *model, Model *light, Camera *camera) {
+void UpdateShaderUniform(unsigned int *shader, Models *models, Model *model, Camera *camera) {
 	glUseProgram(*shader);
 
 	if (model->type == OBJ_MODEL) {
@@ -149,14 +151,19 @@ void UpdateShaderUniform(unsigned int *shader, Model *model, Model *light, Camer
 		ShaderSetInt(&model->shader, "material.specular", &b);
 		ShaderSetFloat(&model->shader, "material.shininess", &model->data.material.shininess);
 
-		ShaderSetVec3(&model->shader, "light.ambient", &light->data.light.ambient);
-		ShaderSetVec3(&model->shader, "light.diffuse", &light->data.light.diffuse);
-		ShaderSetVec3(&model->shader, "light.specular", &light->data.light.specular);
+		ShaderSetVec3(&model->shader, "light[0].position", &models->model[2].translate[0]);
+		ShaderSetVec3(&model->shader, "light[0].ambient", &models->model[2].data.light.ambient);
+		ShaderSetVec3(&model->shader, "light[0].diffuse", &models->model[2].data.light.diffuse);
+		ShaderSetVec3(&model->shader, "light[0].specular", &models->model[2].data.light.specular);
+		ShaderSetFloat(&model->shader, "light[0].attLinear", &models->model[2].data.light.attLinear);
+		ShaderSetFloat(&model->shader, "light[0].attQuadratic", &models->model[2].data.light.attQuadratic);
 
-		ShaderSetVec3(&model->shader, "light.position", &light->translate[0]);
-
-		ShaderSetFloat(&model->shader, "light.attLinear", &light->data.light.attLinear);
-		ShaderSetFloat(&model->shader, "light.attQuadratic", &light->data.light.attQuadratic);
+		ShaderSetVec3(&model->shader, "light[1].position", &models->model[3].translate[0]);
+		ShaderSetVec3(&model->shader, "light[1].ambient", &models->model[3].data.light.ambient);
+		ShaderSetVec3(&model->shader, "light[1].diffuse", &models->model[3].data.light.diffuse);
+		ShaderSetVec3(&model->shader, "light[1].specular", &models->model[3].data.light.specular);
+		ShaderSetFloat(&model->shader, "light[1].attLinear", &models->model[3].data.light.attLinear);
+		ShaderSetFloat(&model->shader, "light[1].attQuadratic", &models->model[3].data.light.attQuadratic);
 
 		ShaderSetVec3(&model->shader, "camPos", &camera->position);
 	} else if (model->type == OBJ_LIGHT_POINT) {

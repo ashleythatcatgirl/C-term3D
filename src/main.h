@@ -35,7 +35,7 @@ typedef enum {
 } ObjectType;
 
 typedef struct Window {
-	double delay;
+	float delay;
 	int width;
 	int height;
 	GLFWwindow *frame;
@@ -68,7 +68,6 @@ typedef struct Light {
 	float attLinear;
 	float attQuadratic;
 } Light;
-
 typedef struct Model {
 	unsigned int VBO;
 	unsigned int VAO;
@@ -96,7 +95,6 @@ typedef struct Tex {
 	unsigned int memory;
 	char name[64];
 } Tex;
-
 typedef struct Texture {
 	Tex *diffuse;
 	Tex *specular;
@@ -104,17 +102,10 @@ typedef struct Texture {
 	unsigned int diffuseCount;
 	unsigned int specularCount;
 } Texture;
-
 typedef struct Textures {
 	unsigned int count;
 	Texture *texture;
 } Textures;
-
-typedef struct Transforms {
-	mat4 model;
-	mat4 view;
-	mat4 projection;
-} Transforms;
 
 typedef struct Camera {
 	vec3 position;
@@ -128,17 +119,11 @@ typedef struct Camera {
 	float yaw;
 
 	float zoom;
-
-	float moveSpeed;
-	float turnSpeed;
 } Camera;
 
 typedef struct Mouse {
 	float lastX;
 	float lastY;
-
-	float xOffset;
-	float yOffset;
 
 	float sensitivity;
 
@@ -151,16 +136,15 @@ typedef struct Controls {
 } Controls;
 
 
-void InitializeStructs(Window *window, Input *input, Textures *textures, Models *models, Transforms *transforms, Camera* camera, Mouse *mouse, Controls *controls);
+void InitializeStructs(Window *window, Input *input, Textures *textures, Models *models, Camera* camera, Mouse *mouse, Controls *controls);
 
 void SetModelData(Model *model);
 
 int LoadTextures(Textures *textures);
-int LinkTextures(Textures *textures, unsigned int *shaderProgram);
 
 void UpdateLight(Model *light);
 
-int RenderLoop(Window *window, Input *input, Regex *regex, Models *models, Textures *textures, Transforms *transforms, Camera *camera);
+int RenderLoop(Window *window, Input *input, Regex *regex, Models *models, Textures *textures, Camera *camera);
 
 void FreeMemory(Models *models, Textures *textures);
 

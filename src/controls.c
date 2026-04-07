@@ -14,8 +14,8 @@ void ProcessKeyInput(Window *window, Camera *camera, float deltaTime) {
 		GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 	}
 
-	float moveSpeed = camera->moveSpeed * deltaTime;
-	float turnSpeed = camera->turnSpeed * deltaTime;
+	float moveSpeed = 2.5 * deltaTime;
+	float turnSpeed = 2.5 * deltaTime;
 	if(glfwGetKey(window->frame, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) moveSpeed *= 4;
 
 	if(glfwGetKey(window->frame, GLFW_KEY_W) == GLFW_PRESS) CameraMoveZ(camera, moveSpeed);
@@ -42,16 +42,16 @@ void mouse_callback(GLFWwindow* window, double xPos, double yPos) {
 		controls->mouse->firstMouse = false;
 	}
 
-	controls->mouse->xOffset = xPos - controls->mouse->lastX;
-	controls->mouse->yOffset = controls->mouse->lastY - yPos;
-	controls->mouse->xOffset *= controls->mouse->sensitivity;
-	controls->mouse->yOffset *= controls->mouse->sensitivity;
+	float xOffset = xPos - controls->mouse->lastX;
+	float yOffset = controls->mouse->lastY - yPos;
+	xOffset *= 0.005;
+	yOffset *= 0.005;
 
 	controls->mouse->lastX = xPos;
 	controls->mouse->lastY = yPos;
 	
-	CameraYaw(controls->camera, controls->mouse->xOffset, window);
-	CameraPitch(controls->camera, controls->mouse->yOffset, window);
+	CameraYaw(controls->camera, xOffset, window);
+	CameraPitch(controls->camera, yOffset, window);
 }
 
 void scroll_callback(GLFWwindow *window, double xOffset, double yOffset) {

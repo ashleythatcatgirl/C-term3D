@@ -8,7 +8,7 @@
 int CreateRegexPatterns(Regex *regex) {
 	const char* texture = "texture [0-9][0-9]* [0-9][0-9]";
 	const char* translate = "translate [0-9][0-9]* [0-9][0-9]* [xyz] [+-][0-9][0-9]*";
-	const char* lightFalloff = "lightFalloff [0-9][0-9]* [0-9]\.[0-9]* [0-9]\.[0-9]*";
+	const char* lightFalloff = "lightFalloff [0-9][0-9]* [0-9]\\.[0-9]* [0-9]\\.[0-9]*";
 	const char* patterns[3] = {
 		texture, translate, lightFalloff
 	};
@@ -55,6 +55,7 @@ int CheckInput(Input *input, Regex *regex, Models *models, Textures *textures) {
 	else if (!regexec(&regex->patterns[0], input->buffer, 0, NULL, 0)) SetTexture(input, models, &textures->count);
 	else if (!regexec(&regex->patterns[1], input->buffer, 0, NULL, 0)) SetTranslate(input, models);
 	else if (!regexec(&regex->patterns[2], input->buffer, 0, NULL, 0)) SetLightFalloff(input, models);
+	else printf("I have no idea what \n %sis\n", input->buffer);
 
 	return 0;
 }

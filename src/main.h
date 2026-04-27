@@ -7,8 +7,12 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "include/stb_image.h"
-#include "include/cglm/cglm.h"
+#include "../include/stb_image.h"
+#include "../include/cglm/cglm.h"
+
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -66,42 +70,40 @@ typedef struct Light {
 	float attQuadratic;
 } Light;
 
-typedef struct Model {
+typedef struct Model2 {
 	unsigned int VBO;
 	unsigned int VAO;
 
 	unsigned int shader;
 
-	vec3 translate;
-	vec3 rotate;
-	vec3 scale;
+	vec3 translate, rotate, scale;
 
 	ObjectType type;
 	union {
 		Material material;
 		Light light;
 	} data;
-} Model;
+} Model2;
 
 typedef struct Models {
 	unsigned int count;
-	Model *model;
+	Model2 *model;
 } Models;
 
 typedef struct Tex {
 	unsigned int memory;
 	char name[64];
 } Tex;
-typedef struct Texture {
+typedef struct Texture2 {
 	Tex *diffuse;
 	Tex *specular;
 
 	unsigned int diffuseCount;
 	unsigned int specularCount;
-} Texture;
+} Texture2;
 typedef struct Textures {
 	unsigned int count;
-	Texture *texture;
+	Texture2 *texture;
 } Textures;
 
 typedef struct Camera {
@@ -133,17 +135,17 @@ typedef struct Controls {
 } Controls;
 
 
-void InitializeStructs(Window *window, Input *input, Models *models, Textures *textures, Camera* camera, Mouse *mouse, Controls *controls);
 
-void SetModelData(Model *model);
+void SetModelData(Model2 *model);
 
 int LoadTextures(Textures *textures);
+int GenerateTexture(Tex *tex);
 
-void UpdateLight(Model *light);
+void UpdateLight(Model2 *light);
 
-int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Camera *camera);
 
 void FreeMemory(Models *models, Textures *textures);
+void *ResizeArray(void *array, unsigned int size);
 
 
 #endif

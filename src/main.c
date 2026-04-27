@@ -1,22 +1,21 @@
 
-
 #include "main.h"
 
-#include <assimp/cimport.h>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+#include "../include/glad.c"
 
-#include "include/cglm/vec3.h"
-#include "include/glad.c"
-
-#include "shader.c"
+#include "mesh.h"
 #include "parseInput.c"
 #include "controls.c"
+#include "shader.h"
 #include "window.c"
+#include "mesh.c"
 
 #include "verticies.c"
+#include <stdio.h>
+#include <stdlib.h>
 
-#include <GLFW/glfw3.h>
+void InitializeStructs(Window *window, Input *input, Models *models, Textures *textures, Camera* camera, Mouse *mouse, Controls *controls, Scene *scene);
+int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Camera *camera, Scene *scene);
 
 int main() {
 	struct Window window;
@@ -28,8 +27,10 @@ int main() {
 	struct Camera camera;
 	struct Mouse mouse;
 	struct Controls controls;
+
+	struct Scene scene;
 	
-	InitializeStructs(&window, &input, &models, &textures, &camera, &mouse, &controls);
+	InitializeStructs(&window, &input, &models, &textures, &camera, &mouse, &controls, &scene);
 
 	switch(CreateWindow(&window, &controls)) {
 	case 0:
@@ -40,9 +41,19 @@ int main() {
 		goto exitProgram;
 	}
 
+	printf("loading model 0\n");
+	stbi_set_flip_vertically_on_load(true);
+	LoadModel(&scene.models[0], "../models/backpack/backpack.obj");
+	printf("loading model 1\n");
+	stbi_set_flip_vertically_on_load(false);
+	LoadModel(&scene.models[1], "../models/tannhauser/tannhauser.obj");
+
+	LoadShader(&scene.models[0].shader, "shaders/vertex/normal.glsl", "shaders/fragment/object.glsl");
+	LoadShader(&scene.models[1].shader, "shaders/vertex/normal.glsl", "shaders/fragment/object.glsl");
+
 	printf("Compiling shaders..\n");
 	for (int obj = 0; obj < models.count; obj++) {
-		Model *model = &models.model[obj];
+		Model2 *model = &models.model[obj];
 		if (model->type == OBJ_MODEL)
 			LoadShader(&model->shader, "shaders/vertex/normal.glsl", "shaders/fragment/object.glsl");
 		else if (model->type == OBJ_LIGHT_POINT)
@@ -64,10 +75,12 @@ int main() {
 		goto exitProgram;
 	}
 
+	printf("Loading models\n");
+
 	printf("Loading successful, press enter to continue..");
 	getchar();
 
-	RenderLoop(&window, &input, &models, &textures, &camera);
+	RenderLoop(&window, &input, &models, &textures, &camera, &scene);
 
 exitProgram:
 	FreeMemory(&models, &textures);
@@ -78,7 +91,7 @@ exitProgram:
 	return 0;
 }
 
-int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Camera *camera) {
+int RenderLoop(Window *window, Input *input, Models *models, Textures *textures, Camera *camera, Scene *scene) {
 	printf("Opened window, press ESC to exit\n");
 	printf("View available commands with 'help'\n");
 	glEnable(GL_DEPTH_TEST);
@@ -116,8 +129,53 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 		glm_mat4_identity(projectionTransform);
 		glm_perspective(glm_rad(camera->zoom), (float)window->width/(float)window->height, 0.1, 100.0, projectionTransform);
 
+
+		for (unsigned int m = 0; m < scene->mCount; m++) {
+			glUseProgram(*&scene->models[m].shader);
+
+			glm_mat4_identity(modelTransform);
+			if (m == 1) {
+				glm_translate(modelTransform, (vec3){-4.0, -2.9, 0.0});
+				glm_scale(modelTransform, (vec3){0.05, 0.05, 0.05});
+			} else if (m == 0) {
+				glm_translate(modelTransform, (vec3){4.0, -1.2, 0.0});
+			}
+
+			ShaderSetMat4(&scene->models[m].shader, "view", GL_FALSE, (float*) viewTransform);
+			ShaderSetMat4(&scene->models[m].shader, "projection", GL_FALSE, (float*) projectionTransform);
+			ShaderSetMat4(&scene->models[m].shader, "model", GL_FALSE, (float*) modelTransform);
+
+			float c = 16;
+			ShaderSetFloat(&scene->models[m].shader, "material.shininess", &c);
+
+			ShaderSetVec3(&scene->models[m].shader, "light[0].position", &models->model[12].translate);
+			ShaderSetVec3(&scene->models[m].shader, "light[0].ambient", &models->model[12].data.light.ambient);
+			ShaderSetVec3(&scene->models[m].shader, "light[0].diffuse", &models->model[12].data.light.diffuse);
+			ShaderSetVec3(&scene->models[m].shader, "light[0].specular", &models->model[12].data.light.specular);
+			ShaderSetFloat(&scene->models[m].shader, "light[0].attLinear", &models->model[12].data.light.attLinear);
+			ShaderSetFloat(&scene->models[m].shader, "light[0].attQuadratic", &models->model[12].data.light.attQuadratic);
+
+			ShaderSetVec3(&scene->models[m].shader, "light[1].position", &models->model[13].translate);
+			ShaderSetVec3(&scene->models[m].shader, "light[1].ambient", &models->model[13].data.light.ambient);
+			ShaderSetVec3(&scene->models[m].shader, "light[1].diffuse", &models->model[13].data.light.diffuse);
+			ShaderSetVec3(&scene->models[m].shader, "light[1].specular", &models->model[13].data.light.specular);
+			ShaderSetFloat(&scene->models[m].shader, "light[1].attLinear", &models->model[13].data.light.attLinear);
+			ShaderSetFloat(&scene->models[m].shader, "light[1].attQuadratic", &models->model[13].data.light.attQuadratic);
+
+			ShaderSetVec3(&scene->models[m].shader, "light[2].position", &models->model[14].translate);
+			ShaderSetVec3(&scene->models[m].shader, "light[2].ambient", &models->model[14].data.light.ambient);
+			ShaderSetVec3(&scene->models[m].shader, "light[2].diffuse", &models->model[14].data.light.diffuse);
+			ShaderSetVec3(&scene->models[m].shader, "light[2].specular", &models->model[14].data.light.specular);
+			ShaderSetFloat(&scene->models[m].shader, "light[2].attLinear", &models->model[14].data.light.attLinear);
+			ShaderSetFloat(&scene->models[m].shader, "light[2].attQuadratic", &models->model[14].data.light.attQuadratic);
+
+			ShaderSetVec3(&scene->models[m].shader, "camPos", &camera->position);
+
+			DrawModel(&scene->models[m]);
+		}
+		
 		for (int obj = 0; obj < models->count; obj++) {
-			Model *model = &models->model[obj];
+			Model2 *model = &models->model[obj];
 
 			if (models->model[obj].type == OBJ_MODEL) {
 				glActiveTexture(GL_TEXTURE0);
@@ -164,7 +222,7 @@ int RenderLoop(Window *window, Input *input, Models *models, Textures *textures,
 	return 0;
 }
 
-void SetModelData(Model *model) {
+void SetModelData(Model2 *model) {
 	glGenBuffers(1, &model->VBO);
 	glGenVertexArrays(1, &model->VAO);
 
@@ -191,14 +249,14 @@ int LoadTextures(Textures *textures) {
 	
 	if ((dr1 = opendir(TEXTURE_DIRECTORY)) == NULL) return 1;
 
-	textures->texture = (Texture*)malloc(sizeof(Texture) * 1);
+	textures->texture = (Texture2*)malloc(sizeof(Texture2));
 	if (textures->texture == NULL) return -1;
 
 	char subDir[64], textureName[64];
 	char *end = NULL;
 	int a = 0;
 	bool diffuse = false, specular = false;
-	Texture *texture = NULL;
+	Texture2 *texture = NULL;
 	while ((de1 = readdir(dr1)) != NULL) {
 		if (de1->d_name[0] == '.') continue;
 		printf("\n  ->Texture %s\n", de1->d_name);
@@ -210,8 +268,8 @@ int LoadTextures(Textures *textures) {
 		if ((dr2 = opendir(subDir)) == NULL) continue;
 
 		if (a == 1) {
-			Texture *temp = NULL;
-			temp = (Texture*)realloc(textures->texture, sizeof(Texture) * (textures->count + 1));
+			Texture2 *temp = NULL;
+			temp = (Texture2*)realloc(textures->texture, sizeof(Texture2) * (textures->count + 1));
 			if (temp == NULL) return -1;
 
 			textures->texture = temp;
@@ -289,52 +347,40 @@ int LoadTextures(Textures *textures) {
 	}
 	closedir(dr1);
 
-	// end
-	
-	unsigned char *data;
-	int textureWidth, textureHeight, colorChannels;
-
-	stbi_set_flip_vertically_on_load(true);
 	printf("\n->Setting texture data..\n");
 	for (int i = 0; i < textures->count; i++) {
 		texture = &textures->texture[i];
 		printf("  ->Texture[%d] diffuse\n", i);
-		glGenTextures(1, &texture->diffuse[0].memory);
-		glBindTexture(GL_TEXTURE_2D, texture->diffuse[0].memory);
+		if (GenerateTexture(texture->diffuse) == -1) return -1;
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		if (texture->specular == NULL) continue;
 
-		data = stbi_load(texture->diffuse[0].name, &textureWidth, &textureHeight, &colorChannels, 4);
-		if (!data) return -1;
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,  GL_RGBA, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-
-		stbi_image_free(data);
-
-		if (texture->specular != NULL) {
-			printf("  ->Texture[%d] specular\n", i);
-			glGenTextures(1, &texture->specular[0].memory);
-			glBindTexture(GL_TEXTURE_2D, texture->specular[0].memory);
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-			data = stbi_load(texture->specular[0].name, &textureWidth, &textureHeight, &colorChannels, 4);
-			if (!data) return -1;
-
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0,  GL_RGBA, GL_UNSIGNED_BYTE, data);
-			glGenerateMipmap(GL_TEXTURE_2D);
-
-			stbi_image_free(data);
-		} else {
-		}
+		printf("  ->Texture[%d] specular\n", i);
+		if (GenerateTexture(texture->specular) == -1) return -1;
 	}
+
+	return 0;
+}
+
+int GenerateTexture(Tex *tex) {
+	int textureWidth, textureHeight, colorChannels;
+	unsigned char *data;
+
+	glGenTextures(1, &tex[0].memory);
+	glBindTexture(GL_TEXTURE_2D, tex[0].memory);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	data = stbi_load(tex[0].name, &textureWidth, &textureHeight, &colorChannels, 4);
+	if (!data) return -1;
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureWidth, textureHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	stbi_image_free(data);
 
 	return 0;
 }
@@ -364,13 +410,13 @@ void FreeMemory(Models *models, Textures *textures) {
 }
 
 
-void UpdateLight(Model *light) {
+void UpdateLight(Model2 *light) {
 	glm_vec3_copy(light->data.light.color, light->data.light.specular);
 	glm_vec3_mul(light->data.light.color, (vec3){0.8, 0.8, 0.8}, light->data.light.diffuse);
 	glm_vec3_mul(light->data.light.color, (vec3){0.1, 0.1, 0.1}, light->data.light.ambient);
 }
 
-void InitializeStructs(Window *window, Input *input, Models *models, Textures *textures, Camera* camera, Mouse *mouse, Controls *controls) {
+void InitializeStructs(Window *window, Input *input, Models *models, Textures *textures, Camera* camera, Mouse *mouse, Controls *controls, Scene *scene) {
 	window->delay = glfwGetTime();
 	window->width = INIT_WIDTH;
 	window->height = INIT_HEIGHT;
@@ -382,7 +428,7 @@ void InitializeStructs(Window *window, Input *input, Models *models, Textures *t
 	textures->texture = NULL;
 
 	models->count = 15;
-	models->model = malloc(sizeof(Model) * models->count);
+	models->model = malloc(sizeof(Model2) * models->count);
 
 	vec3 cubeT[10] = {
 		{-2.0, 1.0, 0.0},
@@ -468,7 +514,6 @@ void InitializeStructs(Window *window, Input *input, Models *models, Textures *t
 		models->model[o].data.light.attQuadratic = 0.01;
 	}
 
-
 	glm_vec3_copy((vec3){0.0, 0.0, 3.0}, camera->position);
 	glm_vec3_copy((vec3){0.0, 0.0, -1.0}, camera->front);
 	camera->yaw = -1.57;
@@ -481,4 +526,13 @@ void InitializeStructs(Window *window, Input *input, Models *models, Textures *t
 
 	controls->camera = camera;
 	controls->mouse = mouse;
+
+	scene->mCount = 2;
+	scene->models = malloc(sizeof(Model) * scene->mCount);
+}
+
+void *ResizeArray(void *array, unsigned int size) {
+	void *temp = realloc(array, size);
+	if (!temp) return 0;
+	return temp;
 }

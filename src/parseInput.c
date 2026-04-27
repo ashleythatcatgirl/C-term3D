@@ -1,12 +1,8 @@
 
-#include "main.h"
-#include <regex.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "parseInput.h"
 
 int CreateRegexPatterns(Regex *regex) {
-	const char* texture = "texture [0-9][0-9]* [0-9][0-9]";
+	const char* texture = "texture [0-9][0-9]* [0-9][0-9]*";
 	const char* translate = "translate [0-9][0-9]* [xyz] [+-][0-9][0-9]*";
 	const char* lightFalloff = "lightFalloff [0-9][0-9]* [0-9]\\.[0-9]* [0-9]\\.[0-9]*";
 	const char* patterns[3] = {
@@ -28,7 +24,7 @@ int CreateRegexPatterns(Regex *regex) {
 void FreeRegexPatterns(Regex *regex) {
 	if (regex->patterns != NULL) return;
 	for (int r = 0; r < regex->count; r++) {
-		if (regex->patterns[r].__allocated) regfree(&regex->patterns[r]);
+		regfree(&regex->patterns[r]);
 	}
 	free(regex->patterns);
 }
@@ -98,7 +94,7 @@ void SetTranslate(Input *input, Models *models) {
 	char axis;
 	sscanf(input->buffer, "translate %d %c %f\n", &obj, &axis, &pos);
 	if (obj >= models->count) return;
-	Model *model = &models->model[obj];
+	Model2 *model = &models->model[obj];
 
 	// x is 120th in ascii, followed by y and z
 	// perfect for this lol
@@ -110,7 +106,7 @@ void SetLightFalloff(Input *input, Models *models) {
 	float attL, attQ;
 	sscanf(input->buffer, "lightFalloff %d %f %f\n", &light, &attL, &attQ);
 	if (light >= models->count) return;
-	Model *model = &models->model[light];
+	Model2 *model = &models->model[light];
 	if (model->type == OBJ_MODEL) return;
 	model->data.light.attLinear = attL;
 	model->data.light.attQuadratic = attQ;

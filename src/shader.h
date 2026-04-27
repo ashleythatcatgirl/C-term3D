@@ -13,6 +13,6 @@ void ShaderSetUInt(unsigned int *shader, const char *name, unsigned int *data);
 void ShaderSetVec3(unsigned int *shader, const char *name, vec3 *data);
 void ShaderSetMat4(unsigned int *shader, const char *name, int gl_bool, float *data);
 
-void UpdateShaderUniform(unsigned int *shader, Models *models, Model *model, Camera *camera);
+void UpdateShaderUniform(unsigned int *shader, Models *models, Model2 *model, Camera *camera);
 
 #endif

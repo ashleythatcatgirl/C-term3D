@@ -1,8 +1,5 @@
 
 #include "shader.h"
-#include "main.h"
-#include <stdbool.h>
-#include <stdio.h>
 
 int LoadShader(unsigned int *shaderProgram, const char *vertShader, const char *fragShader) {
 	int success;
@@ -140,13 +137,13 @@ void ShaderSetMat4(unsigned int *shader, const char *name, int gl_bool, float *d
 	glUniformMatrix4fv(location, 1, gl_bool, data);
 }
 
-void UpdateShaderUniform(unsigned int *shader, Models *models, Model *model, Camera *camera) {
+void UpdateShaderUniform(unsigned int *shader, Models *models, Model2 *model, Camera *camera) {
 	glUseProgram(*shader);
 
 	if (model->type == OBJ_MODEL) {
 		int a = 0, b = 1;
-		ShaderSetInt(&model->shader, "material.diffuse", &a);
-		ShaderSetInt(&model->shader, "material.specular", &b);
+		ShaderSetInt(&model->shader, "material.texture_diffuse1", &a);
+		ShaderSetInt(&model->shader, "material.texture_specular1", &b);
 		ShaderSetFloat(&model->shader, "material.shininess", &model->data.material.shininess);
 
 		ShaderSetVec3(&model->shader, "light[0].position", &models->model[12].translate);

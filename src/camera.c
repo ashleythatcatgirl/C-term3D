@@ -1,8 +1,5 @@
 
 #include "camera.h"
-#include "include/cglm/vec3.h"
-#include "main.h"
-#include <GLFW/glfw3.h>
 
 void CameraMoveZ(Camera *camera, float moveSpeed) {
 	vec3 move;

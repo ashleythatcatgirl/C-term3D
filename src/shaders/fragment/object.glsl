@@ -8,8 +8,8 @@ in vec2 textureCords;
 #define LIGHTS 3
 
 struct Material {
-	sampler2D diffuse;
-	sampler2D specular;
+	sampler2D texture_diffuse1;
+	sampler2D texture_specular1;
 
 	float shininess;
 };
@@ -56,9 +56,9 @@ vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 fragPos) {
 	float angleDif = max(dot(lightDir, normal), 0.0);
 	float angleSpec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
 
-	vec3 ambient = attenuation * light.ambient * vec3(texture(material.diffuse, textureCords));
-	vec3 diffuse = attenuation * light.diffuse * vec3(texture(material.diffuse, textureCords)) * angleDif;
-	vec3 specular = attenuation * light.specular * vec3(texture(material.specular, textureCords)) * angleSpec;
+	vec3 ambient = attenuation * light.ambient * vec3(texture(material.texture_diffuse1, textureCords));
+	vec3 diffuse = attenuation * light.diffuse * vec3(texture(material.texture_diffuse1, textureCords)) * angleDif;
+	vec3 specular = attenuation * light.specular * vec3(texture(material.texture_specular1, textureCords)) * angleSpec;
 
 	vec3 result = (ambient + diffuse + specular);
 

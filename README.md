@@ -8,6 +8,8 @@ It's a project i decided to make cause i got really into the whole process of re
 Also didn't update the repo in half a year lol, sowwyyyyyyyyyy.
 
 ## Compilation through gcc
+
+# I can't promise this will actually compile on all systems, I use Arch linux so if ur not.. I wish u the best of luck.
 ```
 gcc -lglfw -lm -o main.out main.c
 ```
@@ -24,6 +26,8 @@ Image loading - [stb_image](https://github.com/nothings/stb)
 Matrix and vector calculations - [CGLM](https://github.com/recp/cglm)
 
 Loader generator - [GLAD](https://glad.dav1d.de/)
+
+3D model (model file) loader - [Assimp](https://github.com/assimp/assimp)
 
 ## List of current features
 

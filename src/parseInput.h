@@ -3,19 +3,26 @@
 #define PARSE_INPUT_H
 
 #include "main.h"
+#include "model.h"
 
 void SetNonBlocking();
 int CreateRegexPatterns(Regex *regex);
 int NewPattern(regex_t preg, const char *pattern);
 void FreeRegexPatterns(Regex *regex);
 
-int ParseInput(Input *input, Regex *regex, Models *models, Textures *textures);
-int CheckInput(Input *input, Regex *regex, Models *models, Textures *textures);
+int ParseInput(Input *input, Regex *regex, Scene *scene);
+int CheckInput(Input *input, Regex *regex, Scene *scene);
 
 void ShowHelp();
 void ToggleWireframe(Input *input);
-void SetTexture(Input *input, Models *models, unsigned int *textureCount);
-void SetTranslate(Input *input, Models *models);
-void SetLightFalloff(Input *input, Models *models);
+/*
+void SetTexture(Input *input, Scene *scene);
+
+void SetPosition(Input *input, Scene *scene);
+void SetRotation(Input *input, Scene *scene);
+void SetScale(Input *input, Scene *scene);
+
+void SetLightFalloff(Input *input, Scene* scene);
+*/
 
 #endif

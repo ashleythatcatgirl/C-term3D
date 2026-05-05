@@ -11,7 +11,7 @@ Also didn't update the repo in half a year lol, sowwyyyyyyyyyy.
 
 # I can't promise this will actually compile on all systems, I use Arch linux so if ur not.. I wish u the best of luck.
 ```
-gcc -lglfw -lm -o main.out main.c
+gcc -lglfw -lm lassimp -o main.out main.c
 ```
 I'm pretty sure the libraries used are either included or standard c libraries, if not.. i'll fix it eventually.
 I'll release it as a compiled program at some point so it's actually presentable and not just souce code.

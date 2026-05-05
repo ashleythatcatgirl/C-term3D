@@ -1,5 +1,6 @@
 
 #include "parseInput.h"
+#include "model.h"
 
 int CreateRegexPatterns(Regex *regex) {
 	const char* texture = "texture [0-9][0-9]* [0-9][0-9]*";
@@ -34,24 +35,24 @@ void SetNonBlocking() {
 	fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
 }
 
-int ParseInput(Input *input, Regex *regex, Models *models, Textures *textures) {
+int ParseInput(Input *input, Regex *regex, Scene *scene) {
 	input->length = read(STDIN_FILENO, input->buffer, sizeof(input->buffer)-1);
 
 	if (input->length > 0) {
     		input->buffer[input->length] = '\0';
 
-		CheckInput(input, regex, models, textures);
+		CheckInput(input, regex, scene);
 	}
 
 	return 0;
 }
 
-int CheckInput(Input *input, Regex *regex, Models *models, Textures *textures) {
+int CheckInput(Input *input, Regex *regex, Scene *scene) {
 	if (!strcmp(input->buffer, "help\n")) ShowHelp();
 	else if (!strcmp(input->buffer, "wireframe\n")) ToggleWireframe(input);
-	else if (!regexec(&regex->patterns[0], input->buffer, 0, NULL, 0)) SetTexture(input, models, &textures->count);
-	else if (!regexec(&regex->patterns[1], input->buffer, 0, NULL, 0)) SetTranslate(input, models);
-	else if (!regexec(&regex->patterns[2], input->buffer, 0, NULL, 0)) SetLightFalloff(input, models);
+	//else if (!regexec(&regex->patterns[0], input->buffer, 0, NULL, 0)) SetTexture(input, scene);
+	//else if (!regexec(&regex->patterns[1], input->buffer, 0, NULL, 0)) SetPosition(input, scene);
+	//else if (!regexec(&regex->patterns[2], input->buffer, 0, NULL, 0)) SetLightFalloff(input, scene);
 	else printf("I have no idea what \n %sis\n", input->buffer);
 
 	return 0;
@@ -79,7 +80,8 @@ void ToggleWireframe(Input *input) {
 	}
 }
 
-void SetTexture(Input *input, Models *models, unsigned int *textureCount) {
+/*
+void SetTexture(Input *input, Scene) {
 	int obj, tex;
 	sscanf(input->buffer, "texture %d %d\n", &obj, &tex);
 	if (obj >= models->count || tex >= *textureCount) return;
@@ -111,3 +113,4 @@ void SetLightFalloff(Input *input, Models *models) {
 	model->data.light.attLinear = attL;
 	model->data.light.attQuadratic = attQ;
 }
+*/

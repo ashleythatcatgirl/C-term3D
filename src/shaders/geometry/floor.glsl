@@ -10,19 +10,23 @@ uniform vec3 camPos;
 
 out vec3 position;
 
+const float fSize = 100.0;
+
 void main() {
 	vec3 center = gl_in[0].gl_Position.xyz;
 	vec3 off[4] = {
-		{ 50.0, 0.0,  50.0},
-		{-50.0, 0.0,  50.0},
-		{ 50.0, 0.0, -50.0},
-		{-50.0, 0.0, -50.0}
+		{ fSize, 0.0,  fSize},
+		{-fSize, 0.0,  fSize},
+		{ fSize, 0.0, -fSize},
+		{-fSize, 0.0, -fSize}
 	};
 
+	vec3 vertexPos;
 	for (int i = 0; i < 4; i++) {
+		vertexPos = vec3(center + off[i] + vec3(camPos.x, 0.0, camPos.z));
 
-		gl_Position = projection * view * vec4(center + off[i], 1.0);
-		position = vec3(center + off[i]);
+		gl_Position = projection * view * vec4(vertexPos, 1.0);
+		position = vertexPos;
 		EmitVertex();
 	}
 	EndPrimitive();

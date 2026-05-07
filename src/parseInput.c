@@ -1,16 +1,22 @@
 
 #include "parseInput.h"
+#include "main.h"
 #include "model.h"
 
+const char *infoMsg = "\033[34;1;4mInfo:\033[0m ";
+const char *warningMsg = "\033[33;1;4mWarning:\033[0m ";
+const char *errorMsg = "\033[31;1;4mError:\033[0m ";
+
 int CreateRegexPatterns(Regex *regex) {
-	const char* texture = "texture [0-9][0-9]* [0-9][0-9]*";
-	const char* translate = "translate [0-9][0-9]* [xyz] [+-][0-9][0-9]*";
-	const char* lightFalloff = "lightFalloff [0-9][0-9]* [0-9]\\.[0-9]* [0-9]\\.[0-9]*";
-	const char* patterns[3] = {
-		texture, translate, lightFalloff
+	const char *select = "select [0-9][0-9]*";
+	const char *setPosition = "set position -\\?[0-9]*\\.\\?[0-9]* -\\?[0-9]*\\.\\?[0-9]* -\\?[0-9]*\\.\\?[0-9]*";
+	const char *setRotation = "set rotation -\\?[0-9]*\\.\\?[0-9]* -\\?[0-9]*\\.\\?[0-9]* -\\?[0-9]*\\.\\?[0-9]*";
+	const char *setScale = "set scale [0-9]*\\.\\?[0-9]* [0-9]*\\.\\?[0-9]* [0-9]*\\.\\?[0-9]*";
+	const char *patterns[4] = {
+		select, setPosition, setRotation, setScale 
 	};
 
-	regex->count = 3;
+	regex->count = 4;
 	regex->patterns = malloc(sizeof(regex_t) * regex->count);
 
 	int a = 0;
@@ -50,67 +56,97 @@ int ParseInput(Input *input, Regex *regex, Scene *scene) {
 int CheckInput(Input *input, Regex *regex, Scene *scene) {
 	if (!strcmp(input->buffer, "help\n")) ShowHelp();
 	else if (!strcmp(input->buffer, "wireframe\n")) ToggleWireframe(input);
-	//else if (!regexec(&regex->patterns[0], input->buffer, 0, NULL, 0)) SetTexture(input, scene);
-	//else if (!regexec(&regex->patterns[1], input->buffer, 0, NULL, 0)) SetPosition(input, scene);
-	//else if (!regexec(&regex->patterns[2], input->buffer, 0, NULL, 0)) SetLightFalloff(input, scene);
-	else printf("I have no idea what \n %sis\n", input->buffer);
+	else if (!regexec(&regex->patterns[0], input->buffer, 0, NULL, 0)) Select(input, scene);
+	else if (!regexec(&regex->patterns[1], input->buffer, 0, NULL, 0)) SetPosition(input, scene);
+	else if (!regexec(&regex->patterns[2], input->buffer, 0, NULL, 0)) SetRotation(input, scene);
+	else if (!regexec(&regex->patterns[3], input->buffer, 0, NULL, 0)) SetScale(input, scene);
+	else printf("%sNo entry for command:\n%sList available commmands with \'help\';\n\n", errorMsg, input->buffer);
 
 	return 0;
 }
 
 void ShowHelp() {
-	printf("== C-term3D ==\n");
-	printf("\n");
+	printf("== C-term3D ==\n\n");
 
 	printf(" wireframe\n toggle wireframe\n\n");
-	printf(" texture 'm' 't'\n change texture of model 'm' to 't'\n\n");
-	printf(" translate 'm' 'a' 'p'\n translate model 'm' on axis 'a' to position 'p'\n\n");
-	printf(" lightFalloff 'l' 'i' 'q'\n change the attenuation of light 'l' to (linear) 'i' (quadratic) 'q'\n\n");
+	printf(" select 'm'\n select/deselect model 'm'\n\n");
+	printf(" set position 'x' 'y' 'z'\n set position of selected model to 'x''y''z'\n\n");
+	printf(" set rotation 'a' 'b' 'c'\n set rotation of selected model to 'a''b''c'\n\n");
+	printf(" set scale 'x' 'y' 'z'\n set scale of selected model to 'x''y''z'\n\n");
 }
 
 void ToggleWireframe(Input *input) {
 	if (input->opts == 0b0) {
-		printf("Wireframe enabled\n");
+		printf("%sWireframe enabled;\n", infoMsg);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		input->opts = 0b1;
 	} else if (input->opts == 0b1) {
-		printf("Wireframe disabled\n");
+		printf("%sWireframe disabled;\n", infoMsg);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		input->opts = 0b0;
 	}
 }
 
-/*
-void SetTexture(Input *input, Scene) {
-	int obj, tex;
-	sscanf(input->buffer, "texture %d %d\n", &obj, &tex);
-	if (obj >= models->count || tex >= *textureCount) return;
-	if (models->model[obj].type != OBJ_MODEL) return;
+void Select(Input *input, Scene *scene) {
+	unsigned int obj;
+	sscanf(input->buffer, "select %d", &obj); 
+	if (obj < 0 || obj >= scene->mCount) {
+		printf("%sModel doesnt exist;\n\n", errorMsg);
+		return;
+	}
 
-	models->model[obj].data.material.texture = tex;
+	if (scene->mSelected == obj) {
+		printf("%sDeselected model %d;\n\n", infoMsg, scene->mSelected);
+		scene->models[scene->mSelected].selected = false;
+		scene->mSelected = -1;
+		return;
+	} else if (scene->mSelected >= 0) {
+		printf("%sDeselected model %d;\n\n", infoMsg, scene->mSelected);
+		scene->models[scene->mSelected].selected = false;
+	}
+
+	printf("%sSelected model %d;\n\n", infoMsg, obj);
+	scene->models[obj].selected = true;
+	scene->mSelected = obj;
 }
 
-void SetTranslate(Input *input, Models *models) {
-	int obj;
-	float pos;
-	char axis;
-	sscanf(input->buffer, "translate %d %c %f\n", &obj, &axis, &pos);
-	if (obj >= models->count) return;
-	Model2 *model = &models->model[obj];
+void SetPosition(Input *input, Scene *scene) {
+	vec3 position;
+	sscanf(input->buffer, "set position %f %f %f", &position[0], &position[1], &position[2]); 
 
-	// x is 120th in ascii, followed by y and z
-	// perfect for this lol
-	model->translate[axis - 120] = pos;
-}
+	if (scene->mSelected < 0) {
+		printf("%sNo models selected;\n\n", errorMsg);
+		return;
+	}
 
-void SetLightFalloff(Input *input, Models *models) {
-	int light;
-	float attL, attQ;
-	sscanf(input->buffer, "lightFalloff %d %f %f\n", &light, &attL, &attQ);
-	if (light >= models->count) return;
-	Model2 *model = &models->model[light];
-	if (model->type == OBJ_MODEL) return;
-	model->data.light.attLinear = attL;
-	model->data.light.attQuadratic = attQ;
+	printf("%sSet position of model %d to (%f,%f,%f);\n\n", infoMsg, scene->mSelected,
+		position[0], position[1], position[2]);
+	glm_vec3_copy(position, scene->models[scene->mSelected].position);
 }
-*/
+void SetRotation(Input *input, Scene *scene) {
+	vec3 rotation;
+	sscanf(input->buffer, "set rotation %f %f %f", &rotation[0], &rotation[1], &rotation[2]); 
+
+	if (scene->mSelected < 0) {
+		printf("%sNo models selected;\n\n", errorMsg);
+		return;
+	}
+
+	printf("%sSet rotation of model %d to (%f,%f,%f);\n\n", infoMsg, scene->mSelected,
+		rotation[0], rotation[1], rotation[2]);
+	glm_vec3_copy(rotation, scene->models[scene->mSelected].rotation);
+	glm_vec3_normalize(scene->models[scene->mSelected].rotation);
+}
+void SetScale(Input *input, Scene *scene) {
+	vec3 scale;
+	sscanf(input->buffer, "set scale %f %f %f", &scale[0], &scale[1], &scale[2]); 
+
+	if (scene->mSelected < 0) {
+		printf("%sNo models selected;\n\n", errorMsg);
+		return;
+	}
+
+	printf("%sSet scale of model %d to (%f,%f,%f);\n\n", infoMsg, scene->mSelected,
+		scale[0], scale[1], scale[2]);
+	glm_vec3_copy(scale, scene->models[scene->mSelected].scale);
+}

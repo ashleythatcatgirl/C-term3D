@@ -15,14 +15,11 @@ int CheckInput(Input *input, Regex *regex, Scene *scene);
 
 void ShowHelp();
 void ToggleWireframe(Input *input);
-/*
-void SetTexture(Input *input, Scene *scene);
+
+void Select(Input *input, Scene *scene);
 
 void SetPosition(Input *input, Scene *scene);
 void SetRotation(Input *input, Scene *scene);
 void SetScale(Input *input, Scene *scene);
-
-void SetLightFalloff(Input *input, Scene* scene);
-*/
 
 #endif

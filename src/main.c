@@ -9,6 +9,7 @@
 #include "shader.c"
 #include "window.c"
 #include "model.c"
+#include <stdio.h>
 
 int main() {
 	struct Window window;
@@ -164,12 +165,13 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 			glDrawArrays(GL_POINTS, 0, 1);
 		}
 
-		glUseProgram(scene->floorShader);
+		shader = &scene->floorShader;
+		glUseProgram(*shader);
 
-		ShaderSetMat4(&scene->floorShader, "projection", GL_FALSE, (float*) projectionTransform);
-		ShaderSetMat4(&scene->floorShader, "view", GL_FALSE, (float*) viewTransform);
+		ShaderSetMat4(shader, "projection", GL_FALSE, (float*) projectionTransform);
+		ShaderSetMat4(shader, "view", GL_FALSE, (float*) viewTransform);
 
-		ShaderSetVec3(&scene->floorShader, "camPos", &camera->position);
+		ShaderSetVec3(shader, "camPos", &camera->position);
 
 		glBindVertexArray(scene->debugPointVAO);
 		glDrawArrays(GL_POINTS, 0, 1);
@@ -261,6 +263,7 @@ void InitializeStructs(Window *window, Input *input, Camera* camera, Mouse *mous
 	controls->camera = camera;
 	controls->mouse = mouse;
 
+	scene->mSelected = -1;
 	scene->mCount = 4;
 	scene->models = malloc(sizeof(Model) * scene->mCount);
 

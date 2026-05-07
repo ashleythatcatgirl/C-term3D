@@ -5,55 +5,76 @@ out vec4 FragColor;
 in vec3 position;
 uniform vec3 camPos;
 
-const float sCellSize = 10.0;
-const float lCellSize = 50.0;
+const float sCellSize = 1.0;
+const float lCellSize = 10.0;
 
-const float sCellLine = 0.05;
-const float lCellLine = 0.1;
+const float sCellLine = 0.01;
+const float lCellLine = 0.05;
 
-const float axisLine = 0.1;
+const float axisLine = 0.05;
 
 const vec4 sCellColor = vec4(0.3, 0.3, 0.3, 1.0);
 const vec4 lCellColor = vec4(0.5, 0.5, 0.5, 1.0);
-const vec4 darkColor = vec4(0.1, 0.09, 0.12, 1.0);
 
 const vec4 xColor = vec4(0.8, 0.1, 0.4, 1.0);
 const vec4 zColor = vec4(0.1, 0.4, 0.8, 1.0);
 
 const float minFog = 75.0;
-const float maxFog = 100.0;
+const float maxFog = 150.0;
+
+const float camDist1 = 10.0;
+const float camDist2 = 50.0;
 
 void main() {
-	float sHCellLine = sCellLine / 2.0;
-	float lHCellLine = lCellLine / 2.0;
-	float hAxisLine = axisLine / 2.0;
+	float a_sCellSize = sCellSize;
+	float a_lCellSize = lCellSize;
+	float a_sCellLine = sCellLine;
+	float a_lCellLine = lCellLine;
+	float a_axisLine = axisLine;
 
-	float xs = mod((position.x + sHCellLine), sCellSize);
-	float zs = mod((position.z + sHCellLine), sCellSize);
-	float xl = mod((position.x + lHCellLine), lCellSize);
-	float zl = mod((position.z + lHCellLine), lCellSize);
+	if (camPos.y >= camDist2) {
+		a_sCellSize *= 50.0; 
+		a_lCellSize *= 50.0; 
+		a_sCellLine *= 50.0;
+		a_lCellLine *= 8.0;
+		a_axisLine *= 8.0; 
+	} else if (camPos.y >= camDist1) {
+		a_sCellSize *= 10.0; 
+		a_lCellSize *= 10.0; 
+		a_sCellLine *= 10.0;
+		a_lCellLine *= 4.0;
+		a_axisLine *= 4.0; 
+	}
+
+	float ah_sCellLine = a_sCellLine / 2.0;
+	float ah_lCellLine = a_lCellLine / 2.0;
+	float ah_axisLine = a_axisLine / 2.0;
+
+	float xs = mod((position.x + ah_sCellLine), a_sCellSize);
+	float zs = mod((position.z + ah_sCellLine), a_sCellSize);
+	float xl = mod((position.x + ah_lCellLine), a_lCellSize);
+	float zl = mod((position.z + ah_lCellLine), a_lCellSize);
 
 	vec4 color;
 
-	if (xl <= lCellLine || zl <= lCellLine) {
+	if (xl <= a_lCellLine || zl <= a_lCellLine) {
 		color = lCellColor;
-	} else if (xs <= sCellLine || zs <= sCellLine) {
+	} else if (xs <= a_sCellLine || zs <= a_sCellLine) {
 		color = sCellColor;
 	} else {
-		color = darkColor;
+		color = vec4(0.0, 0.0, 0.0, 0.0);
 	}
 
-
-	if (abs(position.z) <= hAxisLine) {
+	if (abs(position.z) <= ah_axisLine) {
 		color = xColor;
 	}
-	if (abs(position.x) <= hAxisLine) {
+	if (abs(position.x) <= ah_axisLine) {
 		color = zColor;
 	}
 
 	float dist = length(position - camPos);
 	float fogFactor = (maxFog - dist) / (maxFog - minFog);
-	color.a = clamp(fogFactor, 0.0, 1.0);
+	color.a -= (1.0 - clamp(fogFactor, 0.0, 1.0));
 
 	FragColor = color;
 }

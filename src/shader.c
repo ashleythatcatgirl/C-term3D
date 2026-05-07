@@ -109,6 +109,11 @@ void ShaderSetInt(unsigned int *shader, const char *name, int *data) {
 	glUniform1i(location, *data);
 }
 
+void ShaderSetBool(unsigned int *shader, const char *name, bool *data) {	
+	int location = glGetUniformLocation(*shader, name);
+	glUniform1i(location, *data);
+}
+
 void ShaderSetUInt(unsigned int *shader, const char *name, unsigned int *data) {	
 	int location = glGetUniformLocation(*shader, name);
 	glUniform1ui(location, *data);
@@ -128,6 +133,7 @@ void UpdateModelShader(Model *model, Scene *scene, Camera *camera) {
 	glUseProgram(model->shader);
 
 	ShaderSetUInt(&model->shader, "material.shininess", &model->shininess);
+	ShaderSetBool(&model->shader, "selected", &model->selected);
 
 	char number[8];
 	char uniformNum[16], uniform[32];

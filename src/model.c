@@ -88,6 +88,8 @@ void LoadModel(Model *model, const char *file) {
 
 	model->shininess = 8;
 
+	model->selected = false;
+
 	unsigned int pos = 0;
 	for (unsigned int c = 0; file[c] != '\0'; c++) {
 		if (file[c] == '/') pos = c;

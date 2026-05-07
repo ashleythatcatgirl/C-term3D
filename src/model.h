@@ -39,6 +39,8 @@ typedef struct Model {
 	unsigned int shader;
 
 	char directory[64];
+
+	bool selected;
 } Model;
 
 typedef struct Light {
@@ -55,6 +57,8 @@ typedef struct Scene {
 	Model *models;
 	Light *lights;
 
+	int mSelected;
+	
 	unsigned int mCount, lCount;
 	unsigned int debugPointVAO, debugPointVBO;
 	unsigned int floorShader;

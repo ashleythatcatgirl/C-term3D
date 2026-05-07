@@ -31,6 +31,7 @@ uniform Material material;
 uniform Light light[LIGHTS];
 
 uniform vec3 camPos;
+uniform bool selected;
 
 const float minFog = 75.0;
 const float maxFog = 100.0;
@@ -53,6 +54,11 @@ void main() {
 	float dist = length(vFPos - camPos);
 	float fogFactor = (maxFog - dist) / (maxFog - minFog);
 	float alpha = clamp(fogFactor, 0.0, 1.0);
+
+	if (selected == true) {
+		result = (vec3(1.0, 1.0, 1.0) - result);
+		clamp(result, 0.0, 1.0);
+	}
 	
 	FragColor = vec4(vec3(result), alpha);
 }

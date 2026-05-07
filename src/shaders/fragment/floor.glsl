@@ -19,11 +19,12 @@ const vec4 lCellColor = vec4(0.5, 0.5, 0.5, 1.0);
 const vec4 xColor = vec4(0.8, 0.1, 0.4, 1.0);
 const vec4 zColor = vec4(0.1, 0.4, 0.8, 1.0);
 
-const float minFog = 75.0;
-const float maxFog = 150.0;
+const float minFog = 96.0;
+const float maxFog = 128.0;
 
 const float camDist1 = 10.0;
-const float camDist2 = 50.0;
+const float camDist2 = 25.0;
+const float camDist3 = 50.0;
 
 void main() {
 	float a_sCellSize = sCellSize;
@@ -32,18 +33,24 @@ void main() {
 	float a_lCellLine = lCellLine;
 	float a_axisLine = axisLine;
 
-	if (camPos.y >= camDist2) {
-		a_sCellSize *= 50.0; 
-		a_lCellSize *= 50.0; 
-		a_sCellLine *= 50.0;
-		a_lCellLine *= 8.0;
-		a_axisLine *= 8.0; 
-	} else if (camPos.y >= camDist1) {
+	if (camPos.y >= camDist3) {
 		a_sCellSize *= 10.0; 
 		a_lCellSize *= 10.0; 
 		a_sCellLine *= 10.0;
-		a_lCellLine *= 4.0;
-		a_axisLine *= 4.0; 
+		a_lCellLine *= 10.0;
+		a_axisLine *= 10.0; 
+	} else if (camPos.y >= camDist2) {
+		a_sCellSize *= 5.0; 
+		a_lCellSize *= 5.0; 
+		a_sCellLine *= 5.0;
+		a_lCellLine *= 5.0;
+		a_axisLine *= 5.0; 
+	} else if (camPos.y >= camDist1) {
+		a_sCellSize *= 2.0; 
+		a_lCellSize *= 2.0; 
+		a_sCellLine *= 2.0;
+		a_lCellLine *= 2.0;
+		a_axisLine *= 2.0; 
 	}
 
 	float ah_sCellLine = a_sCellLine / 2.0;

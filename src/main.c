@@ -11,6 +11,9 @@
 #include "model.c"
 #include <stdio.h>
 
+const float nearPlane = 0.1;
+const float farPlane = 128.0;
+
 int main() {
 	struct Window window;
 	struct Input input;
@@ -120,7 +123,7 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 
 		glm_mat4_identity(projectionTransform);
 		glm_perspective(glm_rad(camera->zoom),
-			(float)window->width/(float)window->height, 0.1, 100.0, projectionTransform
+			(float)window->width/(float)window->height, nearPlane, farPlane, projectionTransform
 		);
 
 		glm_mat4_identity(viewTransform);

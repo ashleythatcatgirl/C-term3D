@@ -33,8 +33,8 @@ uniform Light light[LIGHTS];
 uniform vec3 camPos;
 uniform bool selected;
 
-const float minFog = 75.0;
-const float maxFog = 100.0;
+const float minFog = 96.0;
+const float maxFog = 128.0;
 
 vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 fPos, vec3 difSample, vec3 specSample);
 

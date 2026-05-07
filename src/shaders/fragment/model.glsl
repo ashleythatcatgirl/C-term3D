@@ -32,6 +32,9 @@ uniform Light light[LIGHTS];
 
 uniform vec3 camPos;
 
+const float minFog = 75.0;
+const float maxFog = 100.0;
+
 vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 fPos, vec3 difSample, vec3 specSample);
 
 void main() {
@@ -46,8 +49,12 @@ void main() {
 	for (int l = 0; l < LIGHTS; l++) {
 		result += CalculatePointLight(light[l], normal, viewDir, vFPos, difSample, specSample);
 	}
+
+	float dist = length(vFPos - camPos);
+	float fogFactor = (maxFog - dist) / (maxFog - minFog);
+	float alpha = clamp(fogFactor, 0.0, 1.0);
 	
-	FragColor = vec4(vec3(result), 1.0);
+	FragColor = vec4(vec3(result), alpha);
 }
 
 vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 fPos, vec3 difSample, vec3 specSample) {

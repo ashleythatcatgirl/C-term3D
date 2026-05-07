@@ -10,7 +10,7 @@ uniform vec3 camPos;
 
 out vec3 position;
 
-const float fSize = 100.0;
+const float fSize = 200.0;
 
 void main() {
 	vec3 center = gl_in[0].gl_Position.xyz;

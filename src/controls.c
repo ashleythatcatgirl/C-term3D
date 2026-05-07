@@ -16,9 +16,9 @@ void ProcessKeyInput(Window *window, Camera *camera, float deltaTime) {
 		GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
 	}
 
-	float moveSpeed = 2.5 * deltaTime;
+	float moveSpeed = 5.0 * deltaTime;
 	float turnSpeed = 2.5 * deltaTime;
-	if(glfwGetKey(frame, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) moveSpeed *= 4;
+	if(glfwGetKey(frame, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) moveSpeed *= 5.0;
 
 	if(glfwGetKey(frame, GLFW_KEY_W) == GLFW_PRESS) CameraMoveZ(camera, moveSpeed);
 	if(glfwGetKey(frame, GLFW_KEY_S) == GLFW_PRESS) CameraMoveZ(camera, -moveSpeed);

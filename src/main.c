@@ -4,11 +4,9 @@
 #include "../include/glad.c"
 
 #include "include.h"
-#include "model.h"
 #include "parseInput.c"
 #include "controls.c"
 #include "shader.c"
-#include "shader.h"
 #include "window.c"
 #include "model.c"
 
@@ -97,7 +95,7 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 	
 	mat4 modelTransform, viewTransform, projectionTransform;
 
-	vec3 skyColor = {0.0, 0.0, 0.0};
+	vec3 skyColor = {0.08, 0.07, 0.1};
 
 	float deltaTime = 0.0;
 	float currentFrame = 0.0, lastFrame = 0.0;

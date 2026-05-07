@@ -3,6 +3,7 @@
 out vec4 FragColor;
 
 in vec3 position;
+uniform vec3 camPos;
 
 const float sCellSize = 10.0;
 const float lCellSize = 50.0;
@@ -14,10 +15,13 @@ const float axisLine = 0.1;
 
 const vec4 sCellColor = vec4(0.3, 0.3, 0.3, 1.0);
 const vec4 lCellColor = vec4(0.5, 0.5, 0.5, 1.0);
-const vec4 darkColor = vec4(0.04, 0.03, 0.05, 1.0);
+const vec4 darkColor = vec4(0.1, 0.09, 0.12, 1.0);
 
-const vec4 xColor = vec4(1.0, 0.0, 0.0, 1.0);
-const vec4 zColor = vec4(0.0, 0.0, 1.0, 1.0);
+const vec4 xColor = vec4(0.8, 0.1, 0.4, 1.0);
+const vec4 zColor = vec4(0.1, 0.4, 0.8, 1.0);
+
+const float minFog = 75.0;
+const float maxFog = 100.0;
 
 void main() {
 	float sHCellLine = sCellLine / 2.0;
@@ -46,6 +50,10 @@ void main() {
 	if (abs(position.x) <= hAxisLine) {
 		color = zColor;
 	}
+
+	float dist = length(position - camPos);
+	float fogFactor = (maxFog - dist) / (maxFog - minFog);
+	color.a = clamp(fogFactor, 0.0, 1.0);
 
 	FragColor = color;
 }

@@ -9,6 +9,7 @@ const unsigned int INIT_WIDTH = 960;
 const unsigned int INIT_HEIGHT = 640;
 
 typedef struct Window {
+	float fps;
 	float delay;
 	int width;
 	int height;
@@ -23,7 +24,9 @@ typedef struct Regex {
 typedef struct Input {
 	char buffer[128];
 	int length;
-	unsigned int opts;
+
+	bool wireframe;
+	bool fps;
 } Input;
 typedef struct Camera {
 	vec3 position;
@@ -65,5 +68,7 @@ void *ResizeArray(void *array, unsigned int size);
 
 void InitializeStructs(Window *window, Input *input, Camera* camera, Mouse *mouse, Controls *controls, Scene *scene);
 int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene);
+
+void RenderModel(Model *model, Scene *scene, Camera *camera, mat4 *projectionT, mat4 *viewT, mat4 *modelT);
 
 #endif

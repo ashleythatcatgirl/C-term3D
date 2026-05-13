@@ -2,6 +2,7 @@
 #include "parseInput.h"
 #include "main.h"
 #include "model.h"
+#include <stdbool.h>
 
 const char *infoMsg = "\033[34;1;4mInfo:\033[0m ";
 const char *warningMsg = "\033[33;1;4mWarning:\033[0m ";
@@ -55,7 +56,8 @@ int ParseInput(Input *input, Regex *regex, Scene *scene) {
 
 int CheckInput(Input *input, Regex *regex, Scene *scene) {
 	if (!strcmp(input->buffer, "help\n")) ShowHelp();
-	else if (!strcmp(input->buffer, "wireframe\n")) ToggleWireframe(input);
+	else if (!strcmp(input->buffer, "toggle wireframe\n")) ToggleWireframe(input);
+	else if (!strcmp(input->buffer, "toggle fps\n")) ToggleFps(input);
 	else if (!regexec(&regex->patterns[0], input->buffer, 0, NULL, 0)) Select(input, scene);
 	else if (!regexec(&regex->patterns[1], input->buffer, 0, NULL, 0)) SetPosition(input, scene);
 	else if (!regexec(&regex->patterns[2], input->buffer, 0, NULL, 0)) SetRotation(input, scene);
@@ -68,7 +70,8 @@ int CheckInput(Input *input, Regex *regex, Scene *scene) {
 void ShowHelp() {
 	printf("== C-term3D ==\n\n");
 
-	printf(" wireframe\n toggle wireframe\n\n");
+	printf(" toggle wireframe\n toggle wireframe mode\n\n");
+	printf(" toggle fps\n toggle fps display\n\n");
 	printf(" select 'm'\n select/deselect model 'm'\n\n");
 	printf(" set position 'x' 'y' 'z'\n set position of selected model to 'x''y''z'\n\n");
 	printf(" set rotation 'a' 'b' 'c'\n set rotation of selected model to 'a''b''c'\n\n");
@@ -76,24 +79,35 @@ void ShowHelp() {
 }
 
 void ToggleWireframe(Input *input) {
-	if (input->opts == 0b0) {
+	if (input->wireframe == false) {
 		printf("%sWireframe enabled;\n", infoMsg);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		input->opts = 0b1;
-	} else if (input->opts == 0b1) {
+		input->wireframe = true;
+	} else if (input->wireframe == true) {
 		printf("%sWireframe disabled;\n", infoMsg);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		input->opts = 0b0;
+		input->wireframe = false;
+	}
+}
+void ToggleFps(Input *input) {
+	if (input->fps == false) {
+		printf("%sFps enabled;\n", infoMsg);
+		input->fps = true;
+	} else if (input->fps == true) {
+		printf("%sFps disabled;\n", infoMsg);
+		input->fps = false;
 	}
 }
 
 void Select(Input *input, Scene *scene) {
+	Model *newModel = NULL;
 	unsigned int obj;
 	sscanf(input->buffer, "select %d", &obj); 
 	if (obj < 0 || obj >= scene->mCount) {
 		printf("%sModel doesnt exist;\n\n", errorMsg);
 		return;
 	}
+	newModel = &scene->models[obj];
 
 	if (scene->mSelected == obj) {
 		printf("%sDeselected model %d;\n\n", infoMsg, scene->mSelected);
@@ -105,8 +119,11 @@ void Select(Input *input, Scene *scene) {
 		scene->models[scene->mSelected].selected = false;
 	}
 
-	printf("%sSelected model %d;\n\n", infoMsg, obj);
-	scene->models[obj].selected = true;
+	printf("%sSelected model %d;\n", infoMsg, obj);
+	printf("Position: %f, %f, %f;\n", newModel->position[0], newModel->position[1], newModel->position[2]);
+	printf("Rotation: %f, %f, %f;\n", newModel->rotation[0], newModel->rotation[1], newModel->rotation[2]);
+	printf("Scale: %f, %f, %f;\n\n", newModel->scale[0], newModel->scale[1], newModel->scale[2]);
+	newModel->selected = true;
 	scene->mSelected = obj;
 }
 

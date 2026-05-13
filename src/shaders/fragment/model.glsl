@@ -36,9 +36,15 @@ uniform bool selected;
 const float minFog = 96.0;
 const float maxFog = 128.0;
 
-vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 fPos, vec3 difSample, vec3 specSample);
+vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 difSample, vec3 specSample);
+float AddFog();
 
 void main() {
+	if (selected == true) {
+		FragColor = vec4(0.5, 0.1, 0.7, AddFog());
+		return;
+	}
+
 	vec3 normal = normalize(vNCoords);
 	vec3 viewDir = normalize(camPos - vFPos);
 
@@ -48,26 +54,17 @@ void main() {
 	vec3 specSample = vec3(texture(material.texture_specular1, vTCoords));
 
 	for (int l = 0; l < LIGHTS; l++) {
-		result += CalculatePointLight(light[l], normal, viewDir, vFPos, difSample, specSample);
-	}
-
-	float dist = length(vFPos - camPos);
-	float fogFactor = (maxFog - dist) / (maxFog - minFog);
-	float alpha = clamp(fogFactor, 0.0, 1.0);
-
-	if (selected == true) {
-		result = (vec3(1.0, 1.0, 1.0) - result);
-		clamp(result, 0.0, 1.0);
+		result += CalculatePointLight(light[l], normal, viewDir, difSample, specSample);
 	}
 	
-	FragColor = vec4(vec3(result), alpha);
+	FragColor = vec4(vec3(result), AddFog());
 }
 
-vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 fPos, vec3 difSample, vec3 specSample) {
-	float distance = length(light.position - fPos);
+vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 difSample, vec3 specSample) {
+	float distance = length(light.position - vFPos);
 	float attenuation = 1.0 / (1.0 + light.attLinear * distance + light.attQuadratic * pow(distance, 2));
 
-	vec3 lightDir = normalize(light.position - fPos);
+	vec3 lightDir = normalize(light.position - vFPos);
 	vec3 reflectDir = reflect(-lightDir, normal);
 
 	float angleDif = max(dot(lightDir, normal), 0.0);
@@ -80,4 +77,10 @@ vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 fPos, vec3
 	vec3 result = attenuation * (ambient + diffuse + specular);
 
 	return result;
+}
+
+float AddFog() {
+	float dist = length(vFPos - camPos);
+	float fogFactor = (maxFog - dist) / (maxFog - minFog);
+	return clamp(fogFactor, 0.0, 1.0);
 }

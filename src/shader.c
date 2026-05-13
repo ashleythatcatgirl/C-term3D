@@ -133,7 +133,6 @@ void UpdateModelShader(Model *model, Scene *scene, Camera *camera) {
 	glUseProgram(model->shader);
 
 	ShaderSetUInt(&model->shader, "material.shininess", &model->shininess);
-	ShaderSetBool(&model->shader, "selected", &model->selected);
 
 	char number[8];
 	char uniformNum[16], uniform[32];

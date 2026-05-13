@@ -4,6 +4,7 @@
 #include "../include/glad.c"
 
 #include "include.h"
+#include "model.h"
 #include "parseInput.c"
 #include "controls.c"
 #include "shader.c"
@@ -88,6 +89,9 @@ exitProgram:
 int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 	printf("Opened window, press ESC to exit\n");
 	printf("View available commands with 'help'\n");
+
+	glfwSwapInterval(1);
+	glEnable(GL_STENCIL_TEST);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -97,7 +101,7 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 	SetNonBlocking();
 	CreateRegexPatterns(&regex);
 	
-	mat4 modelTransform, viewTransform, projectionTransform;
+	mat4 modelT, viewT, projectionT;
 
 	vec3 skyColor = {0.08, 0.07, 0.1};
 
@@ -108,6 +112,8 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 	Model *model;
 	Light *light;
 	while(!glfwWindowShouldClose(window->frame)) {	
+		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
 		scene->models[1].rotationAngle += 0.01;
 		ParseInput(input, &regex, scene);
 
@@ -115,38 +121,27 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
+		window->fps = (1.0 / deltaTime);
+		if (input->fps) printf("fps: %f\n", window->fps);
+
 		glfwGetFramebufferSize(window->frame, &window->width, &window->height);
 		ProcessKeyInput(window, camera, deltaTime);
 
 		glClearColor(skyColor[0], skyColor[1], skyColor[2], 1.0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		glm_mat4_identity(projectionTransform);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		
+		glm_mat4_identity(projectionT);
 		glm_perspective(glm_rad(camera->zoom),
-			(float)window->width/(float)window->height, nearPlane, farPlane, projectionTransform
+			(float)window->width/(float)window->height, nearPlane, farPlane, projectionT
 		);
 
-		glm_mat4_identity(viewTransform);
+		glm_mat4_identity(viewT);
 		glm_vec3_add(camera->position, camera->front, camera->target);
-		glm_lookat(camera->position, camera->target, (vec3){0.0, 1.0, 0.0}, viewTransform);
+		glm_lookat(camera->position, camera->target, (vec3){0.0, 1.0, 0.0}, viewT);
 
 		for (unsigned int m = 0; m < scene->mCount; m++) {
-			model = &scene->models[m];
-			shader = &model->shader;
-			glUseProgram(*shader);
-
-			glm_mat4_identity(modelTransform);
-			glm_translate(modelTransform, model->position);
-			glm_rotate(modelTransform, model->rotationAngle, model->rotation);
-			glm_scale(modelTransform, model->scale);
-
-			ShaderSetMat4(shader, "projection", GL_FALSE, (float*) projectionTransform);
-			ShaderSetMat4(shader, "view", GL_FALSE, (float*) viewTransform);
-			ShaderSetMat4(shader, "model", GL_FALSE, (float*) modelTransform);
-
-			UpdateModelShader(model, scene, camera);
-
-			DrawModel(model);
+			RenderModel(&scene->models[m], scene, camera,
+				&projectionT, &viewT, &modelT);
 		}
 
 		for (unsigned int l = 0; l < scene->lCount; l++) {
@@ -154,12 +149,12 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 			shader = &light->shader;
 			glUseProgram(*shader);
 
-			glm_mat4_identity(modelTransform);
-			glm_translate(modelTransform, light->position);
+			glm_mat4_identity(modelT);
+			glm_translate(modelT, light->position);
 
-			ShaderSetMat4(shader, "projection", GL_FALSE, (float*) projectionTransform);
-			ShaderSetMat4(shader, "view", GL_FALSE, (float*) viewTransform);
-			ShaderSetMat4(shader, "model", GL_FALSE, (float*) modelTransform);
+			ShaderSetMat4(shader, "projection", GL_FALSE, (float*) projectionT);
+			ShaderSetMat4(shader, "view", GL_FALSE, (float*) viewT);
+			ShaderSetMat4(shader, "model", GL_FALSE, (float*) modelT);
 
 			ShaderSetVec3(shader, "light.position", &light->position);
 			ShaderSetVec3(shader, "light.color", &light->color);
@@ -171,8 +166,8 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 		shader = &scene->floorShader;
 		glUseProgram(*shader);
 
-		ShaderSetMat4(shader, "projection", GL_FALSE, (float*) projectionTransform);
-		ShaderSetMat4(shader, "view", GL_FALSE, (float*) viewTransform);
+		ShaderSetMat4(shader, "projection", GL_FALSE, (float*) projectionT);
+		ShaderSetMat4(shader, "view", GL_FALSE, (float*) viewT);
 
 		ShaderSetVec3(shader, "camPos", &camera->position);
 
@@ -189,6 +184,53 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 	FreeRegexPatterns(&regex);
 
 	return 0;
+}
+
+void RenderModel(Model *model, Scene *scene, Camera *camera, mat4 *projectionT, mat4 *viewT, mat4 *modelT) {
+	glUseProgram(model->shader);
+
+	glm_mat4_identity(*modelT);
+	glm_translate(*modelT, model->position);
+	glm_rotate(*modelT, model->rotationAngle, model->rotation);
+	glm_scale(*modelT, model->scale);
+
+	ShaderSetMat4(&model->shader, "projection", GL_FALSE, (float*) projectionT);
+	ShaderSetMat4(&model->shader, "view", GL_FALSE, (float*) viewT);
+	ShaderSetMat4(&model->shader, "model", GL_FALSE, (float*) modelT);
+
+	bool a = false;
+	ShaderSetBool(&model->shader, "selected", &a);
+	UpdateModelShader(model, scene, camera);
+
+	if (model->selected == true) {
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF);
+	}
+
+	DrawModel(model);
+
+	if (model->selected == true) {
+		vec3 largerScale;
+		glm_vec3_mul(model->scale, (vec3){1.05, 1.05, 1.05}, largerScale);
+
+		glm_mat4_identity(*modelT);
+				glm_translate(*modelT, model->position);
+				glm_rotate(*modelT, model->rotationAngle, model->rotation);
+				glm_scale(*modelT, largerScale);
+
+				ShaderSetMat4(&model->shader, "model", GL_FALSE, (float*) modelT);
+				ShaderSetBool(&model->shader, "selected", &model->selected);
+
+				glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+				glStencilMask(0x00);
+
+				DrawModel(model);
+
+				glStencilFunc(GL_ALWAYS, 1, 0xFF);
+				glStencilMask(0xFF);
+			}
+			glClear(GL_STENCIL_BUFFER_BIT);
+
 }
 
 void FreeMemory(Scene *scene) {
@@ -251,7 +293,8 @@ void InitializeStructs(Window *window, Input *input, Camera* camera, Mouse *mous
 	window->height = INIT_HEIGHT;
 	window->frame = NULL;
 
-	input->opts = 0;
+	input->wireframe = false;
+	input->fps = false;
 
 	glm_vec3_copy((vec3){0.0, 5.0, 5.0}, camera->position);
 	glm_vec3_copy((vec3){0.0, -0.707, -0.707}, camera->front);

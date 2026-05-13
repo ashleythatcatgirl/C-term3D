@@ -15,6 +15,7 @@ int CheckInput(Input *input, Regex *regex, Scene *scene);
 
 void ShowHelp();
 void ToggleWireframe(Input *input);
+void ToggleFps(Input *input);
 
 void Select(Input *input, Scene *scene);
 

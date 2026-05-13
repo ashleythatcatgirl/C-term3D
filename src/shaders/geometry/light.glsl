@@ -8,59 +8,37 @@ uniform mat4 view;
 uniform mat4 model;
 
 const float radius = 0.5;
-const float limit = 40.0;
+const int limit = 32;
+
+#define M_2PI 6.283
+
+void CreateCircle(vec3 center, vec3 angleVector[limit + 1]);
 
 void main() {
+	vec3 angleVectors[3][limit + 1];
 	vec3 center = gl_in[0].gl_Position.xyz;
 
-	/*
 	float angle;
-	vec3 off, off2;
-	float r = 0.25;
-	float d = 1.0;
-	float limit1 = 31;
-	float limit2 = 7;
-	float angle1, angle2;
+	float angleSin, angleCos;
+	for (int i = 0; i <= limit; i++) {
+		angle = M_2PI * float(i) / float(limit);
+		angleSin = sin(angle);
+		angleCos = cos(angle);
 
-	for (float i = 0.0; i <= limit1; i++) {
-		angle1 = 2 * 3.14 * i / limit1;
-		off = vec3(sin(angle1), 0.0, cos(angle1)) * d;
-
-		for (float j = 0.0; j <= limit2; j++) {
-			angle2 = 2 * 3.14 * j / limit2;
-			off2 = vec3(sin(angle2), cos(angle2), 0.0) * r;
-			off += off2;
-
-			gl_Position = projection * view * model * vec4(center + off, 1.0);
-			EmitVertex();
-		}
-
+		angleVectors[0][i] = vec3(0.0, angleSin, angleCos);
+		angleVectors[1][i] = vec3(angleCos, 0.0, angleSin);
+		angleVectors[2][i] = vec3(angleSin, angleCos, 0.0);
 	}
-	EndPrimitive();
-	*/
 
-	float angle;
+	CreateCircle(center, angleVectors[0]);
+	CreateCircle(center, angleVectors[1]);
+	CreateCircle(center, angleVectors[2]);
+}
+
+void CreateCircle(vec3 center, vec3 angleVector[limit + 1]) {
 	vec3 off;
-	for (float i = 0.0; i <= limit; i++) {
-		angle = 2 * 3.14 * i / limit;
-
-		off = vec3(sin(angle), cos(angle), 0.0) * radius;
-		gl_Position = projection * view * model * vec4(center + off, 1.0);
-		EmitVertex();
-	}
-	EndPrimitive();
-	for (float i = 0.0; i <= limit; i++) {
-		angle = 2 * 3.14 * i / limit;
-
-		off = vec3(0.0, sin(angle), cos(angle)) * radius;
-		gl_Position = projection * view * model * vec4(center + off, 1.0);
-		EmitVertex();
-	}
-	EndPrimitive();
-	for (float i = 0.0; i <= limit; i++) {
-		angle = 2 * 3.14 * i / limit;
-
-		off = vec3(cos(angle), 0.0, sin(angle)) * radius;
+	for (int i = 0; i <= limit; i++) {
+		off = angleVector[i] * radius;
 		gl_Position = projection * view * model * vec4(center + off, 1.0);
 		EmitVertex();
 	}

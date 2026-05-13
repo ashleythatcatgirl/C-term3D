@@ -51,17 +51,22 @@ typedef struct Light {
 	float attLinear, attQuadratic;
 
 	unsigned int shader;
+	unsigned int VAO, VBO;
 } Light;
 
+typedef struct Floor {
+	unsigned int shader;
+	unsigned int VAO, VBO;
+} Floor;
+
 typedef struct Scene {
+	Floor floor;
 	Model *models;
 	Light *lights;
 
 	int mSelected;
 	
 	unsigned int mCount, lCount;
-	unsigned int debugPointVAO, debugPointVBO;
-	unsigned int floorShader;
 } Scene;
 
 void SetupMesh(Mesh *mesh);

@@ -12,13 +12,25 @@ uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
 
+uniform bool selected;
+
+const float outlineWidth = 0.1;
+
 void main() {
-	gl_Position = projection * view * model * vec4(aVertex, 1.0);
-	vFPos = vec3(model * vec4(aVertex, 1.0));
+	vec3 position;
+	position = aVertex;
 
 	vec3 Normal = mat3(transpose(inverse(model))) * aNormal;
 
-	vVCoords = aVertex;
+	if (selected == true) {
+		position += Normal * outlineWidth;
+	}
+
+	gl_Position = projection * view * model * vec4(position, 1.0);
+	vFPos = vec3(model * vec4(position, 1.0));
+
+
+	vVCoords = position;
 	vNCoords = Normal;
 	vTCoords = aTexture;
 }

@@ -27,6 +27,7 @@ typedef struct Input {
 
 	bool wireframe;
 	bool fps;
+	bool vsync;
 } Input;
 typedef struct Camera {
 	vec3 position;
@@ -58,7 +59,7 @@ typedef struct Controls {
 
 void UpdateLight(Light *light);
 
-void CreateDebugPoint(Scene *scene);
+void CreatePoint(unsigned int *VAO, unsigned int *VBO);
 
 void FreeMemory(Scene *scene);
 void FreeModel(Model *model);
@@ -70,5 +71,7 @@ void InitializeStructs(Window *window, Input *input, Camera* camera, Mouse *mous
 int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene);
 
 void RenderModel(Model *model, Scene *scene, Camera *camera, mat4 *projectionT, mat4 *viewT, mat4 *modelT);
+void RenderLight(Light *light, mat4 *projectionT, mat4 *viewT, mat4 *modelT);
+void RenderFloor(Floor *floor, Camera *camera, mat4 *projectionT, mat4 *viewT);
 
 #endif

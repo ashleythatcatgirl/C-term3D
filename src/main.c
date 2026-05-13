@@ -10,7 +10,6 @@
 #include "shader.c"
 #include "window.c"
 #include "model.c"
-#include <stdio.h>
 
 const float nearPlane = 0.1;
 const float farPlane = 128.0;
@@ -59,18 +58,19 @@ int main() {
 	LoadModel(&scene.models[3], "../models/cube_1/cube1.obj");
 	glm_vec3_copy((vec3){0.0, 10.0, 0.0}, scene.models[3].position);
 
-	CreateDebugPoint(&scene);
-
 	printf("Loading model shaders\n");
 	for (unsigned int m = 0; m < scene.mCount; m++) {
 		LoadShader(&scene.models[m].shader, (const char*[3]){"shaders/vertex/model.glsl", "", "shaders/fragment/model.glsl"});
 	}
 	printf("Loading light shaders\n");
 	for (unsigned int l = 0; l < scene.lCount; l++) {
+		CreatePoint(&scene.lights[l].VAO, &scene.lights[l].VBO);
+
 		LoadShader(&scene.lights[l].shader, (const char*[3]){"shaders/vertex/light.glsl", "shaders/geometry/light.glsl", "shaders/fragment/light.glsl"});
 	}
 
-	LoadShader(&scene.floorShader, (const char*[3]){"shaders/vertex/floor.glsl", "shaders/geometry/floor.glsl", "shaders/fragment/floor.glsl"});
+	CreatePoint(&scene.floor.VAO, &scene.floor.VBO);
+	LoadShader(&scene.floor.shader, (const char*[3]){"shaders/vertex/floor.glsl", "shaders/geometry/floor.glsl", "shaders/fragment/floor.glsl"});
 
 	printf("Loading successful, press enter to continue..");
 	getchar();
@@ -90,7 +90,6 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 	printf("Opened window, press ESC to exit\n");
 	printf("View available commands with 'help'\n");
 
-	glfwSwapInterval(1);
 	glEnable(GL_STENCIL_TEST);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -108,12 +107,10 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 	float deltaTime = 0.0;
 	float currentFrame = 0.0, lastFrame = 0.0;
 
-	unsigned int *shader;
-	Model *model;
-	Light *light;
 	while(!glfwWindowShouldClose(window->frame)) {	
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
+		// remove lol
 		scene->models[1].rotationAngle += 0.01;
 		ParseInput(input, &regex, scene);
 
@@ -145,34 +142,13 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 		}
 
 		for (unsigned int l = 0; l < scene->lCount; l++) {
-			light = &scene->lights[l];
-			shader = &light->shader;
-			glUseProgram(*shader);
-
-			glm_mat4_identity(modelT);
-			glm_translate(modelT, light->position);
-
-			ShaderSetMat4(shader, "projection", GL_FALSE, (float*) projectionT);
-			ShaderSetMat4(shader, "view", GL_FALSE, (float*) viewT);
-			ShaderSetMat4(shader, "model", GL_FALSE, (float*) modelT);
-
-			ShaderSetVec3(shader, "light.position", &light->position);
-			ShaderSetVec3(shader, "light.color", &light->color);
-
-			glBindVertexArray(scene->debugPointVAO);
-			glDrawArrays(GL_POINTS, 0, 1);
+			RenderLight(&scene->lights[l],
+				&projectionT, &viewT, &modelT);
 		}
 
-		shader = &scene->floorShader;
-		glUseProgram(*shader);
+		RenderFloor(&scene->floor, camera,
+			&projectionT, &viewT);
 
-		ShaderSetMat4(shader, "projection", GL_FALSE, (float*) projectionT);
-		ShaderSetMat4(shader, "view", GL_FALSE, (float*) viewT);
-
-		ShaderSetVec3(shader, "camPos", &camera->position);
-
-		glBindVertexArray(scene->debugPointVAO);
-		glDrawArrays(GL_POINTS, 0, 1);
 		
 		glfwSwapBuffers(window->frame);
 		glfwPollEvents();
@@ -210,27 +186,46 @@ void RenderModel(Model *model, Scene *scene, Camera *camera, mat4 *projectionT, 
 	DrawModel(model);
 
 	if (model->selected == true) {
-		vec3 largerScale;
-		glm_vec3_mul(model->scale, (vec3){1.05, 1.05, 1.05}, largerScale);
+		ShaderSetBool(&model->shader, "selected", &model->selected);
 
-		glm_mat4_identity(*modelT);
-				glm_translate(*modelT, model->position);
-				glm_rotate(*modelT, model->rotationAngle, model->rotation);
-				glm_scale(*modelT, largerScale);
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		glStencilMask(0x00);
 
-				ShaderSetMat4(&model->shader, "model", GL_FALSE, (float*) modelT);
-				ShaderSetBool(&model->shader, "selected", &model->selected);
+		DrawModel(model);
 
-				glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-				glStencilMask(0x00);
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF);
+	}
+	glClear(GL_STENCIL_BUFFER_BIT);
+}
 
-				DrawModel(model);
+void RenderLight(Light *light, mat4 *projectionT, mat4 *viewT, mat4 *modelT) {
+	glUseProgram(light->shader);
 
-				glStencilFunc(GL_ALWAYS, 1, 0xFF);
-				glStencilMask(0xFF);
-			}
-			glClear(GL_STENCIL_BUFFER_BIT);
+	glm_mat4_identity(*modelT);
+	glm_translate(*modelT, light->position);
 
+	ShaderSetMat4(&light->shader, "projection", GL_FALSE, (float*) projectionT);
+	ShaderSetMat4(&light->shader, "view", GL_FALSE, (float*) viewT);
+	ShaderSetMat4(&light->shader, "model", GL_FALSE, (float*) modelT);
+
+	ShaderSetVec3(&light->shader, "light.position", &light->position);
+	ShaderSetVec3(&light->shader, "light.color", &light->color);
+
+	glBindVertexArray(light->VAO);
+	glDrawArrays(GL_POINTS, 0, 1);
+}
+
+void RenderFloor(Floor *floor, Camera *camera, mat4 *projectionT, mat4 *viewT) {
+	glUseProgram(floor->shader);
+
+	ShaderSetMat4(&floor->shader, "projection", GL_FALSE, (float*) projectionT);
+	ShaderSetMat4(&floor->shader, "view", GL_FALSE, (float*) viewT);
+
+	ShaderSetVec3(&floor->shader, "camPos", &camera->position);
+
+	glBindVertexArray(floor->VAO);
+	glDrawArrays(GL_POINTS, 0, 1);
 }
 
 void FreeMemory(Scene *scene) {
@@ -275,12 +270,12 @@ void UpdateLight(Light *light) {
 	glm_vec3_mul(light->color, (vec3){0.1, 0.1, 0.1}, light->ambient);
 }
 
-void CreateDebugPoint(Scene *scene) {
-	glGenVertexArrays(1, &scene->debugPointVAO);
-	glGenBuffers(1, &scene->debugPointVBO);
+void CreatePoint(unsigned int *VAO, unsigned int *VBO) {
+	glGenVertexArrays(1, VAO);
+	glGenBuffers(1, VBO);
 
-	glBindVertexArray(scene->debugPointVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, scene->debugPointVBO);
+	glBindVertexArray(*VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, *VAO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vec3), (vec3){0.0, 0.0, 0.0}, GL_STATIC_DRAW);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)0);
@@ -295,6 +290,7 @@ void InitializeStructs(Window *window, Input *input, Camera* camera, Mouse *mous
 
 	input->wireframe = false;
 	input->fps = false;
+	input->vsync = true;
 
 	glm_vec3_copy((vec3){0.0, 5.0, 5.0}, camera->position);
 	glm_vec3_copy((vec3){0.0, -0.707, -0.707}, camera->front);

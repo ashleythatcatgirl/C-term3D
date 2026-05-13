@@ -2,6 +2,7 @@
 #include "parseInput.h"
 #include "main.h"
 #include "model.h"
+#include <complex.h>
 #include <stdbool.h>
 
 const char *infoMsg = "\033[34;1;4mInfo:\033[0m ";
@@ -58,6 +59,7 @@ int CheckInput(Input *input, Regex *regex, Scene *scene) {
 	if (!strcmp(input->buffer, "help\n")) ShowHelp();
 	else if (!strcmp(input->buffer, "toggle wireframe\n")) ToggleWireframe(input);
 	else if (!strcmp(input->buffer, "toggle fps\n")) ToggleFps(input);
+	else if (!strcmp(input->buffer, "toggle vsync\n")) ToggleVsync(input);
 	else if (!regexec(&regex->patterns[0], input->buffer, 0, NULL, 0)) Select(input, scene);
 	else if (!regexec(&regex->patterns[1], input->buffer, 0, NULL, 0)) SetPosition(input, scene);
 	else if (!regexec(&regex->patterns[2], input->buffer, 0, NULL, 0)) SetRotation(input, scene);
@@ -72,6 +74,7 @@ void ShowHelp() {
 
 	printf(" toggle wireframe\n toggle wireframe mode\n\n");
 	printf(" toggle fps\n toggle fps display\n\n");
+	printf(" toggle vsync\n toggle vsync (limits the fps of the program to your screens refresh rate, usually 60 fps)\n\n");
 	printf(" select 'm'\n select/deselect model 'm'\n\n");
 	printf(" set position 'x' 'y' 'z'\n set position of selected model to 'x''y''z'\n\n");
 	printf(" set rotation 'a' 'b' 'c'\n set rotation of selected model to 'a''b''c'\n\n");
@@ -96,6 +99,17 @@ void ToggleFps(Input *input) {
 	} else if (input->fps == true) {
 		printf("%sFps disabled;\n", infoMsg);
 		input->fps = false;
+	}
+}
+void ToggleVsync(Input *input) {
+	if (input->vsync == false) {
+		printf("%sVsync enabled;\n", infoMsg);
+		glfwSwapInterval(1);
+		input->vsync = true;
+	} else if (input->vsync == true) {
+		printf("%sVsync disabled;\n", infoMsg);
+		glfwSwapInterval(0);
+		input->vsync = false;
 	}
 }
 

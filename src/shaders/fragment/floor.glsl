@@ -5,96 +5,85 @@ out vec4 FragColor;
 in vec3 position;
 uniform vec3 camPos;
 
-const float sCellSize = 1.0;
-const float lCellSize = 10.0;
+const float fadingS = 0.125;
+const float fadingL = 0.25;
 
-const float sCellLine = 0.01;
-const float lCellLine = 0.05;
+const float sizeS = 1.0;
+const float sizeL = 10.0;
 
-const float axisLine = 0.05;
+const float widthS = 0.5;
+const float widthL = 1.0;
 
-const vec4 sCellColor = vec4(0.3, 0.3, 0.3, 1.0);
-const vec4 lCellColor = vec4(0.5, 0.5, 0.5, 1.0);
+const vec3 colorS = vec3(0.3, 0.3, 0.3);
+const vec3 colorL = vec3(0.5, 0.5, 0.5);
 
-const vec4 xColor = vec4(0.8, 0.1, 0.4, 1.0);
-const vec4 zColor = vec4(0.1, 0.4, 0.8, 1.0);
-
-const float minFog = 96.0;
-const float maxFog = 128.0;
+const vec3 colorX = vec3(0.7, 0.2, 0.3);
+const vec3 colorZ = vec3(0.2, 0.3, 0.7);
 
 const float camDist1 = 10.0;
 const float camDist2 = 25.0;
 const float camDist3 = 50.0;
 
-void ChangeCellSize();
-vec4 AddGrid(float xl, float zl, float xs, float zs, float a_lCellLine, float a_sCellLine);
-vec4 AddAxis(vec4 color, float a_axisLine);
-float AddFog();
+const float minFog = 64.0;
+const float maxFog = 128.0;
+
+float Fog();
 
 void main() {
-	float a_sCellSize = sCellSize;
-	float a_lCellSize = lCellSize;
-	float a_sCellLine = sCellLine;
-	float a_lCellLine = lCellLine;
-	float a_axisLine = axisLine;
+	vec3 color = vec3(0.0);
+	float alpha = 0.0;
+
+	float altSizeS = sizeS;
+	float altSizeL = sizeL;
 
 	if (camPos.y >= camDist3) {
-		a_sCellSize *= 10.0; 
-		a_lCellSize *= 10.0; 
-		a_sCellLine *= 5.0;
-		a_lCellLine *= 5.0;
-		a_axisLine *= 5.0; 
+		altSizeS *= 10.0;
+		altSizeL *= 10.0;
 	} else if (camPos.y >= camDist2) {
-		a_sCellSize *= 5.0; 
-		a_lCellSize *= 5.0; 
-		a_sCellLine *= 2.5;
-		a_lCellLine *= 2.5;
-		a_axisLine *= 2.5; 
+		altSizeS *= 5.0;
+		altSizeL *= 5.0;
 	} else if (camPos.y >= camDist1) {
-		a_sCellSize *= 2.0; 
-		a_lCellSize *= 2.0; 
+		altSizeS *= 2.0;
+		altSizeL *= 2.0;
 	}
 
-	float xs = mod((position.x + a_sCellLine), a_sCellSize);
-	float zs = mod((position.z + a_sCellLine), a_sCellSize);
-	float xl = mod((position.x + a_lCellLine), a_lCellSize);
-	float zl = mod((position.z + a_lCellLine), a_lCellSize);
+	float dist = length(position - camPos);
+	float distFactor = (maxFog - dist) / (maxFog);
+	float altDistFactor = (1 - clamp(distFactor, 0.0, 0.9));
+	float altWidthS = altDistFactor * widthS;
+	float altWidthL = altDistFactor * widthL;
+	float altFadingL = altDistFactor * fadingL;
 
-	vec4 color;
+	float xModS = mod(position.x + altWidthS / 2.0, altSizeS);
+	float zModS = mod(position.z + altWidthS / 2.0, altSizeS);
+	float xModL = mod(position.x + altWidthL / 2.0, altSizeL);
+	float zModL = mod(position.z + altWidthL / 2.0, altSizeL);
 
-	color = AddGrid(xl, zl, xs, zs, a_lCellLine, a_sCellLine);
-	color = AddAxis(color, a_axisLine);
+	float xMod = mod(abs(position.x), 0.0) * 2.0;
+	float zMod = mod(abs(position.z), 0.0) * 2.0;
 
-	color.a -= AddFog();
-
-	FragColor = color;
-}
-
-void ChangeCellSize() {
-
-}
-
-vec4 AddGrid(float xl, float zl, float xs, float zs, float a_lCellLine, float a_sCellLine) {
-	if (xl <= a_lCellLine || zl <= a_lCellLine) {
-		return lCellColor;
-	} else if (xs <= a_sCellLine || zs <= a_sCellLine) {
-		return sCellColor;
+	if (xModL <= altWidthL || zModL <= altWidthL) {
+		color = colorL;
+		alpha = 1.0;
+	} else if (xModS <= altWidthS || zModS <= altWidthS) {
+		color = colorS;
+		alpha = 1.0;
 	}
 
-	return vec4(0.0, 0.0, 0.0, 0.0);
-}
-vec4 AddAxis(vec4 color, float a_axisLine) {
-	if (abs(position.z) <= a_axisLine) {
-		return xColor;
-	}
-	if (abs(position.x) <= a_axisLine) {
-		return zColor;
+	if (zMod <= altWidthL) {
+		color = colorX;
+		alpha = 1.0;
+	} else if (xMod <= altWidthL) {
+		color = colorZ;
+		alpha = 1.0;
 	}
 
-	return color;
+	alpha -= Fog();
+
+	FragColor = vec4(color, alpha);
 }
 
-float AddFog() {
+float Fog() {
 	float dist = length(position - camPos);
 	float fogFactor = (maxFog - dist) / (maxFog - minFog);
 	return (1.0 - clamp(fogFactor, 0.0, 1.0));

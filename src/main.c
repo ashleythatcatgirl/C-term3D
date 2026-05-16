@@ -35,17 +35,20 @@ int main() {
 		goto exitProgram;
 	}
 
+	/*
 	printf("loading model 0\n");
 	stbi_set_flip_vertically_on_load(true);
 	LoadModel(&scene.models[0], "../models/backpack/backpack.obj");
 	glm_vec3_copy((vec3){5.0, 1.7, 0.0}, scene.models[0].position);
+	*/
 
 	printf("loading model 1\n");
 	stbi_set_flip_vertically_on_load(false);
-	LoadModel(&scene.models[1], "../models/tannhauser/tannhauser.obj");
-	glm_vec3_copy((vec3){0.05, 0.05, 0.05}, scene.models[1].scale);
-	glm_vec3_copy((vec3){0.0, 1.0, 0.0}, scene.models[1].rotation);
+	LoadModel(&scene.models[0], "../models/tannhauser/tannhauser.obj");
+	glm_vec3_copy((vec3){0.05, 0.05, 0.05}, scene.models[0].scale);
+	glm_vec3_copy((vec3){0.0, 1.0, 0.0}, scene.models[0].rotation);
 
+	/*
 	printf("loading model 2\n");
 	LoadModel(&scene.models[2], "../models/dragon/dragon.obj");
 	glm_vec3_copy((vec3){-5.0, 1.7, 0.0}, scene.models[2].position);
@@ -57,6 +60,7 @@ int main() {
 	printf("loading model 3\n");
 	LoadModel(&scene.models[3], "../models/cube_1/cube1.obj");
 	glm_vec3_copy((vec3){0.0, 10.0, 0.0}, scene.models[3].position);
+	*/
 
 	printf("Loading model shaders\n");
 	for (unsigned int m = 0; m < scene.mCount; m++) {
@@ -89,7 +93,8 @@ exitProgram:
 int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 	printf("Opened window, press ESC to exit\n");
 	printf("View available commands with 'help'\n");
-
+	
+	glEnable(GL_MULTISAMPLE);
 	glEnable(GL_STENCIL_TEST);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -110,8 +115,6 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 	while(!glfwWindowShouldClose(window->frame)) {	
 		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
-		// remove lol
-		scene->models[1].rotationAngle += 0.01;
 		ParseInput(input, &regex, scene);
 
 		currentFrame = glfwGetTime();
@@ -148,7 +151,6 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 
 		RenderFloor(&scene->floor, camera,
 			&projectionT, &viewT);
-
 		
 		glfwSwapBuffers(window->frame);
 		glfwPollEvents();
@@ -306,7 +308,7 @@ void InitializeStructs(Window *window, Input *input, Camera* camera, Mouse *mous
 	controls->mouse = mouse;
 
 	scene->mSelected = -1;
-	scene->mCount = 4;
+	scene->mCount = 1;
 	scene->models = malloc(sizeof(Model) * scene->mCount);
 
 	scene->lCount = 2;

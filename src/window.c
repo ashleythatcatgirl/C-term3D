@@ -1,6 +1,8 @@
 
 #include "window.h"
 #include "controls.h"
+#include <GLFW/glfw3.h>
+#include <stdio.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	glViewport(0, 0, width, height);
@@ -10,6 +12,7 @@ int CreateWindow(Window *window, Controls *controls) {
 	printf("Window initializiation..\n");
 
 	glfwInit();
+	glfwWindowHint(GLFW_SAMPLES, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);

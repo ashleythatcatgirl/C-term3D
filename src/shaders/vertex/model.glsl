@@ -14,7 +14,7 @@ uniform mat4 model;
 
 uniform bool selected;
 
-const float outlineWidth = 0.1;
+const float OUTLINE_WIDTH = 0.1;
 
 void main() {
 	vec3 position;
@@ -23,7 +23,7 @@ void main() {
 	vec3 Normal = mat3(transpose(inverse(model))) * aNormal;
 
 	if (selected == true) {
-		position += Normal * outlineWidth;
+		position += Normal * OUTLINE_WIDTH;
 	}
 
 	gl_Position = projection * view * model * vec4(position, 1.0);

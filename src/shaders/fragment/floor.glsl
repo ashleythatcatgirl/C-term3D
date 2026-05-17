@@ -3,88 +3,80 @@
 out vec4 FragColor;
 
 in vec3 position;
+
 uniform vec3 camPos;
 
-const float fadingS = 0.125;
-const float fadingL = 0.25;
+const vec3 COLOR_SMALL = vec3(0.3);
+const vec3 COLOR_LARGE = vec3(0.5);
 
-const float sizeS = 1.0;
-const float sizeL = 10.0;
+const vec3 COLOR_X = vec3(0.7, 0.2, 0.3);
+const vec3 COLOR_Z = vec3(0.2, 0.3, 0.7);
 
-const float widthS = 0.5;
-const float widthL = 1.0;
+const float SMALL_SCALE = 1.0;
+const float LARGE_SCALE = 10.0;
 
-const vec3 colorS = vec3(0.3, 0.3, 0.3);
-const vec3 colorL = vec3(0.5, 0.5, 0.5);
+const float SMALL_WIDTH = 0.1;
+const float LARGE_WIDTH = 0.5;
 
-const vec3 colorX = vec3(0.7, 0.2, 0.3);
-const vec3 colorZ = vec3(0.2, 0.3, 0.7);
+const float MIN_FOG = 64.0;
+const float MAX_FOG = 128.0;
 
-const float camDist1 = 10.0;
-const float camDist2 = 25.0;
-const float camDist3 = 50.0;
+const float CAMERA_DISTANCE1 = 10.0;
+const float CAMERA_DISTANCE2 = 25.0;
+const float CAMERA_DISTANCE3 = 50.0;
 
-const float minFog = 64.0;
-const float maxFog = 128.0;
-
-float Fog();
-
-void main() {
-	vec3 color = vec3(0.0);
-	float alpha = 0.0;
-
-	float altSizeS = sizeS;
-	float altSizeL = sizeL;
-
-	if (camPos.y >= camDist3) {
-		altSizeS *= 10.0;
-		altSizeL *= 10.0;
-	} else if (camPos.y >= camDist2) {
-		altSizeS *= 5.0;
-		altSizeL *= 5.0;
-	} else if (camPos.y >= camDist1) {
-		altSizeS *= 2.0;
-		altSizeL *= 2.0;
+float ScaleSize(float size) {
+	if (camPos.y >= CAMERA_DISTANCE3) {
+		return size * 10.0;
+	} else if (camPos.y >= CAMERA_DISTANCE2) {
+		return size * 5.0;
+	} else if (camPos.y >= CAMERA_DISTANCE1) {
+		return size * 2.0;
 	}
 
-	float dist = length(position - camPos);
-	float distFactor = (maxFog - dist) / (maxFog);
-	float altDistFactor = (1 - clamp(distFactor, 0.0, 0.9));
-	float altWidthS = altDistFactor * widthS;
-	float altWidthL = altDistFactor * widthL;
-	float altFadingL = altDistFactor * fadingL;
-
-	float xModS = mod(position.x + altWidthS / 2.0, altSizeS);
-	float zModS = mod(position.z + altWidthS / 2.0, altSizeS);
-	float xModL = mod(position.x + altWidthL / 2.0, altSizeL);
-	float zModL = mod(position.z + altWidthL / 2.0, altSizeL);
-
-	float xMod = mod(abs(position.x), 0.0) * 2.0;
-	float zMod = mod(abs(position.z), 0.0) * 2.0;
-
-	if (xModL <= altWidthL || zModL <= altWidthL) {
-		color = colorL;
-		alpha = 1.0;
-	} else if (xModS <= altWidthS || zModS <= altWidthS) {
-		color = colorS;
-		alpha = 1.0;
-	}
-
-	if (zMod <= altWidthL) {
-		color = colorX;
-		alpha = 1.0;
-	} else if (xMod <= altWidthL) {
-		color = colorZ;
-		alpha = 1.0;
-	}
-
-	alpha -= Fog();
-
-	FragColor = vec4(color, alpha);
+	return size;
 }
 
-float Fog() {
-	float dist = length(position - camPos);
-	float fogFactor = (maxFog - dist) / (maxFog - minFog);
-	return (1.0 - clamp(fogFactor, 0.0, 1.0));
+float gridLine(vec2 coord, float scale, float width) {
+    vec2 grid = abs(fract(coord / scale - 0.5) - 0.5) / fwidth(coord / scale);
+
+    float line = min(grid.x, grid.y);
+
+    return 1.0 - smoothstep(width, width + 1.0, line);
+}
+
+float axisLine(float value) {
+    float dist = abs(value) / fwidth(value);
+
+    return 1.0 - smoothstep(1.0, 2.0, dist);
+}
+
+float fogFactor() {
+    float dist = length(position - camPos);
+
+    return 1.0 - smoothstep(MIN_FOG, MAX_FOG, dist);
+}
+
+void main() {
+    vec2 coord = position.xz;
+
+    float smallGrid = gridLine(coord, ScaleSize(SMALL_SCALE), SMALL_WIDTH);
+    float largeGrid = gridLine(coord, ScaleSize(LARGE_SCALE), LARGE_WIDTH);
+
+    float xAxis = axisLine(position.z);
+    float zAxis = axisLine(position.x);
+
+    vec3 color = vec3(0.0);
+
+    color = mix(color, COLOR_SMALL, smallGrid);
+    color = mix(color, COLOR_LARGE, largeGrid);
+
+    color = mix(color, COLOR_X, xAxis);
+    color = mix(color, COLOR_Z, zAxis);
+
+    float alpha = max(max(smallGrid, largeGrid), max(xAxis, zAxis));
+
+    alpha *= fogFactor();
+
+    FragColor = vec4(color, alpha);
 }

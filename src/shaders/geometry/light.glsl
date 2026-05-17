@@ -7,21 +7,21 @@ uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
 
-const float radius = 0.5;
-const int limit = 32;
+const float RADIUS = 0.5;
+const int LIMIT = 32;
 
 #define M_2PI 6.283
 
-void CreateCircle(vec3 center, vec3 angleVector[limit + 1]);
+void CreateCircle(vec3 center, vec3 angleVector[LIMIT + 1]);
 
 void main() {
-	vec3 angleVectors[3][limit + 1];
+	vec3 angleVectors[3][LIMIT + 1];
 	vec3 center = gl_in[0].gl_Position.xyz;
 
 	float angle;
 	float angleSin, angleCos;
-	for (int i = 0; i <= limit; i++) {
-		angle = M_2PI * float(i) / float(limit);
+	for (int i = 0; i <= LIMIT; i++) {
+		angle = M_2PI * float(i) / float(LIMIT);
 		angleSin = sin(angle);
 		angleCos = cos(angle);
 
@@ -35,10 +35,10 @@ void main() {
 	CreateCircle(center, angleVectors[2]);
 }
 
-void CreateCircle(vec3 center, vec3 angleVector[limit + 1]) {
+void CreateCircle(vec3 center, vec3 angleVector[LIMIT + 1]) {
 	vec3 off;
-	for (int i = 0; i <= limit; i++) {
-		off = angleVector[i] * radius;
+	for (int i = 0; i <= LIMIT; i++) {
+		off = angleVector[i] * RADIUS;
 		gl_Position = projection * view * model * vec4(center + off, 1.0);
 		EmitVertex();
 	}

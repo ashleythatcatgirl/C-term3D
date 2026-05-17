@@ -10,15 +10,15 @@ uniform vec3 camPos;
 
 out vec3 position;
 
-const float fSize = 128.0;
+const float FLOOR_SIZE = 128.0;
 
 void main() {
 	vec3 center = gl_in[0].gl_Position.xyz;
 	vec3 off[4] = {
-		{ fSize, 0.0,  fSize},
-		{-fSize, 0.0,  fSize},
-		{ fSize, 0.0, -fSize},
-		{-fSize, 0.0, -fSize}
+		{ FLOOR_SIZE, 0.0,  FLOOR_SIZE},
+		{-FLOOR_SIZE, 0.0,  FLOOR_SIZE},
+		{ FLOOR_SIZE, 0.0, -FLOOR_SIZE},
+		{-FLOOR_SIZE, 0.0, -FLOOR_SIZE}
 	};
 
 	vec3 vertexPos;

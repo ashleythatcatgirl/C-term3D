@@ -33,8 +33,8 @@ uniform Light light[LIGHTS];
 uniform vec3 camPos;
 uniform bool selected;
 
-const float minFog = 96.0;
-const float maxFog = 128.0;
+const float MIN_FOG = 64.0;
+const float MAX_FOG = 128.0;
 
 vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 difSample, vec3 specSample);
 float AddFog();
@@ -81,6 +81,6 @@ vec3 CalculatePointLight(Light light, vec3 normal, vec3 viewDir, vec3 difSample,
 
 float AddFog() {
 	float dist = length(vFPos - camPos);
-	float fogFactor = (maxFog - dist) / (maxFog - minFog);
+	float fogFactor = (MAX_FOG - dist) / (MAX_FOG - MIN_FOG);
 	return clamp(fogFactor, 0.0, 1.0);
 }

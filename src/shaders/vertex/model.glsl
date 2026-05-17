@@ -3,10 +3,10 @@ layout (location = 0) in vec3 aVertex;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexture;
 
-out vec3 vVCoords;
-out vec3 vNCoords;
-out vec2 vTCoords;
-out vec3 vFPos;
+out vec3 vVertexCoords;
+out vec3 vNormalCoords;
+out vec2 vTextureCoords;
+out vec3 vFragmentPos;
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -22,15 +22,12 @@ void main() {
 
 	vec3 Normal = mat3(transpose(inverse(model))) * aNormal;
 
-	if (selected == true) {
-		position += Normal * OUTLINE_WIDTH;
-	}
+	position += Normal * (OUTLINE_WIDTH * int(selected));
 
 	gl_Position = projection * view * model * vec4(position, 1.0);
-	vFPos = vec3(model * vec4(position, 1.0));
+	vFragmentPos = vec3(model * vec4(position, 1.0));
 
-
-	vVCoords = position;
-	vNCoords = Normal;
-	vTCoords = aTexture;
+	vVertexCoords = position;
+	vNormalCoords = Normal;
+	vTextureCoords = aTexture;
 }

@@ -11,8 +11,8 @@
 #include "window.c"
 #include "model.c"
 
-const float nearPlane = 0.1;
-const float farPlane = 128.0;
+const float NEAR_PLANE = 0.1;
+const float FAR_PLANE = 128.0;
 
 int main() {
 	struct Window window;
@@ -35,20 +35,17 @@ int main() {
 		goto exitProgram;
 	}
 
-	/*
 	printf("loading model 0\n");
 	stbi_set_flip_vertically_on_load(true);
 	LoadModel(&scene.models[0], "../models/backpack/backpack.obj");
 	glm_vec3_copy((vec3){5.0, 1.7, 0.0}, scene.models[0].position);
-	*/
 
 	printf("loading model 1\n");
 	stbi_set_flip_vertically_on_load(false);
-	LoadModel(&scene.models[0], "../models/tannhauser/tannhauser.obj");
-	glm_vec3_copy((vec3){0.05, 0.05, 0.05}, scene.models[0].scale);
-	glm_vec3_copy((vec3){0.0, 1.0, 0.0}, scene.models[0].rotation);
+	LoadModel(&scene.models[1], "../models/tannhauser/tannhauser.obj");
+	glm_vec3_copy((vec3){0.05, 0.05, 0.05}, scene.models[1].scale);
+	glm_vec3_copy((vec3){0.0, 1.0, 0.0}, scene.models[1].rotation);
 
-	/*
 	printf("loading model 2\n");
 	LoadModel(&scene.models[2], "../models/dragon/dragon.obj");
 	glm_vec3_copy((vec3){-5.0, 1.7, 0.0}, scene.models[2].position);
@@ -60,7 +57,6 @@ int main() {
 	printf("loading model 3\n");
 	LoadModel(&scene.models[3], "../models/cube_1/cube1.obj");
 	glm_vec3_copy((vec3){0.0, 10.0, 0.0}, scene.models[3].position);
-	*/
 
 	printf("Loading model shaders\n");
 	for (unsigned int m = 0; m < scene.mCount; m++) {
@@ -132,7 +128,7 @@ int RenderLoop(Window *window, Input *input, Camera *camera, Scene *scene) {
 		
 		glm_mat4_identity(projectionT);
 		glm_perspective(glm_rad(camera->zoom),
-			(float)window->width/(float)window->height, nearPlane, farPlane, projectionT
+			(float)window->width/(float)window->height, NEAR_PLANE, FAR_PLANE, projectionT
 		);
 
 		glm_mat4_identity(viewT);
@@ -308,7 +304,7 @@ void InitializeStructs(Window *window, Input *input, Camera* camera, Mouse *mous
 	controls->mouse = mouse;
 
 	scene->mSelected = -1;
-	scene->mCount = 1;
+	scene->mCount = 4;
 	scene->models = malloc(sizeof(Model) * scene->mCount);
 
 	scene->lCount = 2;

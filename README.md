@@ -1,4 +1,4 @@
-# C-term3D
+# Cterm-3D
 
 #### A very lightweight terminal program for rendering, editing, and exporting 3D models and scenes
 
